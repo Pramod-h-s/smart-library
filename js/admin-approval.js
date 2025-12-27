@@ -1,56 +1,84 @@
-import { db } from "./firebase.js";
+// js/admin/members.js
+import { db } from "../firebase.js";
 import {
   collection,
   getDocs,
-  updateDoc,
-  doc,
   query,
-  where
+  where,
+  updateDoc,
+  doc
 } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
-const tableBody = document.getElementById("pendingUsersTable");
+window.Members = {
+  async loadPending() {
+    const tbody = document.getElementById("membersTableBody");
+    tbody.innerHTML = "<tr><td colspan='8'>Loading...</td></tr>";
 
-async function loadPendingUsers() {
-  tableBody.innerHTML = "";
+    const q = query(
+      collection(db, "users"),
+      where("approved", "==", false)
+    );
 
-  const q = query(
-    collection(db, "users"),
-    where("approved", "==", false)
-  );
+    const snapshot = await getDocs(q);
+    tbody.innerHTML = "";
 
-  const snapshot = await getDocs(q);
+    if (snapshot.empty) {
+      tbody.innerHTML =
+        "<tr><td colspan='8'>No pending approvals</td></tr>";
+      return;
+    }
 
-  if (snapshot.empty) {
-    tableBody.innerHTML = `<tr><td colspan="4">No pending approvals</td></tr>`;
-    return;
+    snapshot.forEach(docSnap => {
+      const u = docSnap.data();
+      const row = `
+        <tr>
+          <td>${u.usn}</td>
+          <td>${u.name}</td>
+          <td>${u.email}</td>
+          <td>${u.phone}</td>
+          <td>${u.role}</td>
+          <td><span class="badge badge-warning">Pending</span></td>
+          <td>-</td>
+          <td>
+            <button class="btn-success"
+              onclick="Members.approveUser('${docSnap.id}')">
+              Approve
+            </button>
+          </td>
+        </tr>`;
+      tbody.innerHTML += row;
+    });
+  },
+
+  async loadAll() {
+    const tbody = document.getElementById("membersTableBody");
+    tbody.innerHTML = "<tr><td colspan='8'>Loading...</td></tr>";
+
+    const snapshot = await getDocs(collection(db, "users"));
+    tbody.innerHTML = "";
+
+    snapshot.forEach(docSnap => {
+      const u = docSnap.data();
+      const row = `
+        <tr>
+          <td>${u.usn}</td>
+          <td>${u.name}</td>
+          <td>${u.email}</td>
+          <td>${u.phone}</td>
+          <td>${u.role}</td>
+          <td>${u.approved ? "Approved" : "Pending"}</td>
+          <td>${u.createdAt?.toDate?.()?.toLocaleDateString() || "-"}</td>
+          <td>-</td>
+        </tr>`;
+      tbody.innerHTML += row;
+    });
+  },
+
+  async approveUser(userId) {
+    await updateDoc(doc(db, "users", userId), {
+      approved: true
+    });
+    alert("User approved successfully");
+    this.loadPending();
   }
-
-  snapshot.forEach((docSnap) => {
-    const user = docSnap.data();
-    const tr = document.createElement("tr");
-
-    tr.innerHTML = `
-      <td>${user.name}</td>
-      <td>${user.email}</td>
-      <td>${user.usn}</td>
-      <td>
-        <button class="btn-primary" onclick="approveUser('${docSnap.id}')">
-          Approve
-        </button>
-      </td>
-    `;
-
-    tableBody.appendChild(tr);
-  });
-}
-
-window.approveUser = async (uid) => {
-  await updateDoc(doc(db, "users", uid), {
-    approved: true
-  });
-
-  alert("User approved successfully");
-  loadPendingUsers();
 };
-
-loadPendingUsers();
