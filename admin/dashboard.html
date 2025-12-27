@@ -141,5 +141,10 @@
             Admin.dashboard.init();
         });
     </script>
+    <script type="module">
+    import { protectPage } from "../js/auth-check.js";
+    protectPage("admin");
+</script>
 </body>
+
 </html>
