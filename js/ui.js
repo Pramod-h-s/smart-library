@@ -1,15 +1,14 @@
 /**
  * Smart Library - UI Controller
- * Navbar, Footer, Logout, Book Cards
+ * Navbar, Footer, Logout
  */
 
 import { auth, db } from "./firebase.js";
-import { onAuthStateChanged, signOut } from
+import { logoutUser } from "./auth-check.js";
+import { onAuthStateChanged } from
   "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
-import {
-  doc,
-  getDoc
-} from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+import { doc, getDoc } from
+  "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
 const UI = {
 
@@ -38,12 +37,11 @@ const UI = {
     ]
   },
 
-  async renderNav() {
+  renderNav() {
     const nav = document.getElementById("main-nav");
     if (!nav) return;
 
     onAuthStateChanged(auth, async (user) => {
-
       let role = "guest";
 
       if (user) {
@@ -77,9 +75,8 @@ const UI = {
               `;
             }
 
-            const active = currentPage === link.href.split("/").pop()
-              ? "active"
-              : "";
+            const active =
+              currentPage === link.href.split("/").pop() ? "active" : "";
 
             return `
               <li>
@@ -92,12 +89,12 @@ const UI = {
         </ul>
       `;
 
-      // LOGOUT HANDLER
+      // ✅ SINGLE SOURCE LOGOUT
       const logoutBtn = document.getElementById("logoutBtn");
       if (logoutBtn) {
         logoutBtn.addEventListener("click", async (e) => {
           e.preventDefault();
-          await signOut(auth);
+          await logoutUser();
           window.location.replace("/login.html");
         });
       }
