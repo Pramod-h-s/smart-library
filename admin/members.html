@@ -72,6 +72,7 @@
                         </button>
                     </div>
                 </div>
+                <h1>Members</h1>
                 <div class="table-container">
                     <table class="data-table">
                         <thead>
@@ -93,6 +94,30 @@
                         </tbody>
                     </table>
                 </div>
+                <hr>
+
+<h2>Pending Student Approvals</h2>
+
+<div class="table-container">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Email</th>
+        <th>USN</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+
+    <tbody id="pendingUsersTable">
+      <tr>
+        <td colspan="4" class="no-data">
+          No pending approvals
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
                 <div class="table-pagination">
                     <button id="prevPage" onclick="Members.prevPage()" class="btn-secondary">Previous</button>
                     <span id="pageInfo" class="page-info">Page 1 of 1</span>
@@ -456,5 +481,7 @@
             Members.init();
         });
     </script>
+    <script type="module" src="../js/admin-approval.js"></script>
 </body>
+
 </html>
