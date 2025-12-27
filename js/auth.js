@@ -58,16 +58,17 @@ const Auth = {
   async registerStudent({ name, email, usn, phone, password }) {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
 
-    await setDoc(doc(db, "users", cred.user.uid), {
-      name,
-      email,
-      usn,
-      phone,
-      role: "student",
-      status: "pending",
-      createdAt: new Date()
-    });
+await setDoc(doc(db, "users", user.uid), {
+  name: name,
+  email: email,
+  usn: usn,
+  phone: phone,
+  role: "student",
+  status: "pending",
+  createdAt: new Date()
+});
   }
 };
 
 export default Auth;
+
