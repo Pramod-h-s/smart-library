@@ -309,4 +309,48 @@ const Auth = {
 };
 
 // Initialize auth
-Auth.init();
+import { auth, db } from "./firebase.js";
+import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+import { doc, getDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+
+const Auth = {
+    initLogin() {
+        const form = document.getElementById("loginForm");
+
+        form.addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            const email = loginEmail.value;
+            const password = loginPassword.value;
+
+            try {
+                const cred = await signInWithEmailAndPassword(auth, email, password);
+                const userRef = doc(db, "users", cred.user.uid);
+                const userSnap = await getDoc(userRef);
+
+                if (!userSnap.exists()) {
+                    alert("User record not found.");
+                    return;
+                }
+
+                const user = userSnap.data();
+
+                if (!user.approved) {
+                    alert("Waiting for admin approval.");
+                    return;
+                }
+
+                if (user.role === "admin") {
+                    window.location.href = "/admin/dashboard.html";
+                } else {
+                    window.location.href = "/user/dashboard.html";
+                }
+
+            } catch (err) {
+                alert(err.message);
+            }
+        });
+    }
+};
+
+export default Auth;
