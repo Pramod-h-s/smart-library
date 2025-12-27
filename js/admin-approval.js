@@ -1,72 +1,90 @@
-// js/admin/members.js
 import { db } from "./firebase.js";
 import {
   collection,
   getDocs,
-  query,
-  where,
   updateDoc,
-  doc
+  doc,
+  query,
+  where
 } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
-window.Members = {
-  async loadPending() {
-    const q = query(
-      collection(db, "users"),
-      where("status", "==", "pending")
-    );
+const tbody = document.getElementById("membersTableBody");
 
-    const snapshot = await getDocs(q);
-    this.render(snapshot.docs);
-  },
+// Load only pending students
+async function loadPending() {
+  tbody.innerHTML = "";
 
-  async loadAll() {
-    const snapshot = await getDocs(collection(db, "users"));
-    this.render(snapshot.docs);
-  },
+  const q = query(
+    collection(db, "users"),
+    where("role", "==", "student"),
+    where("approved", "==", false)
+  );
 
-  render(docs) {
-    const tbody = document.getElementById("membersTableBody");
-    tbody.innerHTML = "";
+  const snap = await getDocs(q);
 
-    if (docs.length === 0) {
-      tbody.innerHTML =
-        `<tr><td colspan="8">No users found</td></tr>`;
-      return;
-    }
+  if (snap.empty) {
+    tbody.innerHTML =
+      `<tr><td colspan="7">No pending approvals</td></tr>`;
+    return;
+  }
 
-    docs.forEach(d => {
-      const u = d.data();
-      const row = document.createElement("tr");
+  snap.forEach(docSnap => {
+    const u = docSnap.data();
+    const uid = docSnap.id;
 
-      row.innerHTML = `
+    tbody.innerHTML += `
+      <tr>
+        <td>${u.usn || "-"}</td>
+        <td>${u.name}</td>
+        <td>${u.email}</td>
+        <td>${u.phone || "-"}</td>
+        <td>Student</td>
+        <td>Pending</td>
+        <td>
+          <button class="btn-success"
+            onclick="approveUser('${uid}')">
+            Approve
+          </button>
+        </td>
+      </tr>
+    `;
+  });
+}
+
+// Approve user
+window.approveUser = async function (uid) {
+  await updateDoc(doc(db, "users", uid), {
+    approved: true
+  });
+
+  alert("Student approved successfully");
+  loadPending();
+};
+
+// Load all users
+async function loadAll() {
+  tbody.innerHTML = "";
+  const snap = await getDocs(collection(db, "users"));
+
+  snap.forEach(docSnap => {
+    const u = docSnap.data();
+    tbody.innerHTML += `
+      <tr>
         <td>${u.usn || "-"}</td>
         <td>${u.name}</td>
         <td>${u.email}</td>
         <td>${u.phone || "-"}</td>
         <td>${u.role}</td>
-        <td>${u.status}</td>
-        <td>
-          ${u.status === "pending"
-            ? `<button class="btn-success"
-                onclick="Members.approve('${d.id}')">
-                Approve
-              </button>`
-            : "-"
-          }
-        </td>
-      `;
+        <td>${u.approved ? "Approved" : "Pending"}</td>
+        <td>-</td>
+      </tr>
+    `;
+  });
+}
 
-      tbody.appendChild(row);
-    });
-  },
+// Button handlers
+document.getElementById("pendingBtn").onclick = loadPending;
+document.getElementById("allBtn").onclick = loadAll;
 
-  async approve(uid) {
-    await updateDoc(doc(db, "users", uid), {
-      status: "approved"
-    });
-
-    alert("User approved");
-    this.loadPending();
-  }
-};
+// Default load
+loadPending();
