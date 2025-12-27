@@ -15,10 +15,10 @@ export function protectPage(requiredRole) {
             return;
         }
 
-        const userRef = doc(db, "users", user.uid);
+        const snap = await getDoc(doc(db, "users", user.uid));
         const userSnap = await getDoc(userRef);
 
-        if (!userSnap.exists()) {
+          if (!snap.exists() || snap.data().role !== "admin") {
             alert("User record not found. Contact admin.");
             window.location.href = "/login.html";
             return;
