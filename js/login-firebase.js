@@ -1,40 +1,60 @@
+// js/login-firebase.js
 import { auth, db } from "./firebase.js";
-import { signInWithEmailAndPassword } 
-  from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
-import { doc, getDoc } 
-  from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+import {
+  signInWithEmailAndPassword
+} from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
 
-document.getElementById("loginForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
+import {
+  doc,
+  getDoc
+} from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
+document.addEventListener("DOMContentLoaded", () => {
+  const form = document.getElementById("loginForm");
 
-  try {
-    const userCred = await signInWithEmailAndPassword(auth, email, password);
-    const uid = userCred.user.uid;
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
 
-    const userSnap = await getDoc(doc(db, "users", uid));
+    const email = document.getElementById("loginEmail").value.trim();
+    const password = document.getElementById("loginPassword").value.trim();
 
-    if (!userSnap.exists()) {
-      alert("User record not found. Contact admin.");
+    if (!email || !password) {
+      alert("Please enter email and password");
       return;
     }
 
-    const user = userSnap.data();
+    try {
+      // 🔐 Firebase Login
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
 
-    if (!user.approved) {
-      alert("Admin approval pending.");
-      return;
+      // 🔍 Get user role from Firestore
+      const userRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userRef);
+
+      if (!userSnap.exists()) {
+        alert("User record not found. Contact admin.");
+        return;
+      }
+
+      const userData = userSnap.data();
+
+      // 🚫 Not approved
+      if (userData.approved === false) {
+        alert("Your account is pending admin approval.");
+        return;
+      }
+
+      // ✅ Role-based redirect
+      if (userData.role === "admin") {
+        window.location.href = "/admin/dashboard.html";
+      } else {
+        window.location.href = "/index.html";
+      }
+
+    } catch (error) {
+      alert(error.message);
+      console.error("Login error:", error);
     }
-
-    if (user.role === "admin") {
-      window.location.href = "admin/dashboard.html";
-    } else {
-      window.location.href = "user/dashboard.html";
-    }
-
-  } catch (error) {
-    alert(error.message);
-  }
+  });
 });
