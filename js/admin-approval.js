@@ -1,5 +1,5 @@
 // js/admin/members.js
-import { db } from "../firebase.js";
+import { db } from "./firebase.js";
 import {
   collection,
   getDocs,
@@ -11,74 +11,62 @@ import {
 
 window.Members = {
   async loadPending() {
-    const tbody = document.getElementById("membersTableBody");
-    tbody.innerHTML = "<tr><td colspan='8'>Loading...</td></tr>";
-
     const q = query(
       collection(db, "users"),
-      where("approved", "==", false)
+      where("status", "==", "pending")
     );
 
     const snapshot = await getDocs(q);
-    tbody.innerHTML = "";
-
-    if (snapshot.empty) {
-      tbody.innerHTML =
-        "<tr><td colspan='8'>No pending approvals</td></tr>";
-      return;
-    }
-
-    snapshot.forEach(docSnap => {
-      const u = docSnap.data();
-      const row = `
-        <tr>
-          <td>${u.usn}</td>
-          <td>${u.name}</td>
-          <td>${u.email}</td>
-          <td>${u.phone}</td>
-          <td>${u.role}</td>
-          <td><span class="badge badge-warning">Pending</span></td>
-          <td>-</td>
-          <td>
-            <button class="btn-success"
-              onclick="Members.approveUser('${docSnap.id}')">
-              Approve
-            </button>
-          </td>
-        </tr>`;
-      tbody.innerHTML += row;
-    });
+    this.render(snapshot.docs);
   },
 
   async loadAll() {
-    const tbody = document.getElementById("membersTableBody");
-    tbody.innerHTML = "<tr><td colspan='8'>Loading...</td></tr>";
-
     const snapshot = await getDocs(collection(db, "users"));
+    this.render(snapshot.docs);
+  },
+
+  render(docs) {
+    const tbody = document.getElementById("membersTableBody");
     tbody.innerHTML = "";
 
-    snapshot.forEach(docSnap => {
-      const u = docSnap.data();
-      const row = `
-        <tr>
-          <td>${u.usn}</td>
-          <td>${u.name}</td>
-          <td>${u.email}</td>
-          <td>${u.phone}</td>
-          <td>${u.role}</td>
-          <td>${u.approved ? "Approved" : "Pending"}</td>
-          <td>${u.createdAt?.toDate?.()?.toLocaleDateString() || "-"}</td>
-          <td>-</td>
-        </tr>`;
-      tbody.innerHTML += row;
+    if (docs.length === 0) {
+      tbody.innerHTML =
+        `<tr><td colspan="8">No users found</td></tr>`;
+      return;
+    }
+
+    docs.forEach(d => {
+      const u = d.data();
+      const row = document.createElement("tr");
+
+      row.innerHTML = `
+        <td>${u.usn || "-"}</td>
+        <td>${u.name}</td>
+        <td>${u.email}</td>
+        <td>${u.phone || "-"}</td>
+        <td>${u.role}</td>
+        <td>${u.status}</td>
+        <td>
+          ${u.status === "pending"
+            ? `<button class="btn-success"
+                onclick="Members.approve('${d.id}')">
+                Approve
+              </button>`
+            : "-"
+          }
+        </td>
+      `;
+
+      tbody.appendChild(row);
     });
   },
 
-  async approveUser(userId) {
-    await updateDoc(doc(db, "users", userId), {
-      approved: true
+  async approve(uid) {
+    await updateDoc(doc(db, "users", uid), {
+      status: "approved"
     });
-    alert("User approved successfully");
+
+    alert("User approved");
     this.loadPending();
   }
 };
