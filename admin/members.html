@@ -74,12 +74,12 @@
                 </div>
                 <h1>Members</h1>
                 <!-- 🔔 FILTER / APPROVAL BUTTONS (ADD THIS) -->
-<div class="filter-bar" style="margin-bottom: 15px;">
-  <button onclick="Members.loadPending()" class="btn-warning">
+<div class="filter-bar" style="margin-bottom:15px">
+  <button id="pendingBtn" class="btn-warning">
     Pending Approvals
   </button>
 
-  <button onclick="Members.loadAll()" class="btn-secondary">
+  <button id="allBtn" class="btn-secondary">
     All Users
   </button>
 </div>
@@ -495,4 +495,5 @@
     <script type="module" src="../js/admin-approval.js"></script>
 </body>
 </html>
+
 
