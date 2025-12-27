@@ -1,233 +1,154 @@
 /**
- * Smart Library - UI Components and Navigation
+ * Smart Library - UI Components and Navigation (Firebase-based)
  */
 
+import { auth, db } from "./firebase.js";
+import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+import { doc, getDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+
 const UI = {
-    navConfig: {
-        guest: [
-            { label: 'Home', href: 'index.html' },
-            { label: 'Books', href: 'books.html' },
-            { label: 'About', href: 'about.html' },
-            { label: 'Login', href: 'login.html' }
-        ],
-        student: [
-            { label: 'Home', href: '../index.html' },
-            { label: 'Books', href: '../books.html' },
-            { label: 'About', href: '../about.html' },
-            { label: 'Dashboard', href: '/user/dashboard.html' },
-            { label: 'Profile', href: '/user/profile.html' },
-            { label: 'Logout', href: '../index.html', action: 'logout' }
-        ],
-        admin: [
-            { label: 'Home', href: '../index.html' },
-            { label: 'Books', href: '../books.html' },
-            { label: 'About', href: '../about.html' },
-            { label: 'Admin Dashboard', href: 'dashboard.html' },
-            { label: 'Books Manager', href: 'books.html' },
-            { label: 'Transactions', href: 'transactions.html' },
-            { label: 'Issue/Return', href: 'issue-return.html' },
-            { label: 'Logout', href: '../index.html', action: 'logout' }
-        ]
-    },
 
-    renderNav() {
-        const nav = document.getElementById('main-nav');
-        if (!nav) return;
+  navConfig: {
+    guest: [
+      { label: "Home", href: "index.html" },
+      { label: "Books", href: "books.html" },
+      { label: "About", href: "about.html" },
+      { label: "Login", href: "login.html" }
+    ],
+    student: [
+      { label: "Home", href: "../index.html" },
+      { label: "Books", href: "../books.html" },
+      { label: "About", href: "../about.html" },
+      { label: "Dashboard", href: "/user/dashboard.html" },
+      { label: "Profile", href: "/user/profile.html" },
+      { label: "Logout", action: "logout" }
+    ],
+    admin: [
+      { label: "Home", href: "../index.html" },
+      { label: "Books", href: "../books.html" },
+      { label: "About", href: "../about.html" },
+      { label: "Admin Dashboard", href: "/admin/dashboard.html" },
+      { label: "Books Manager", href: "/admin/books.html" },
+      { label: "Transactions", href: "/admin/transactions.html" },
+      { label: "Issue/Return", href: "/admin/issue-return.html" },
+      { label: "Logout", action: "logout" }
+    ]
+  },
 
-        const currentPage = window.location.pathname.split('/').pop() || 'index.html';
-        const user = Auth.getCurrentUser();
-        const role = user ? user.role : 'guest';
-        const links = this.navConfig[role];
+  async renderNav() {
+    const nav = document.getElementById("main-nav");
+    if (!nav) return;
 
-        let logoHref = 'index.html';
-        if (role === 'admin') logoHref = 'dashboard.html';
-        if (role === 'student') logoHref = 'dashboard.html';
+    onAuthStateChanged(auth, async (user) => {
+      let role = "guest";
 
-        let logoSrc = 'assets/cbit-logo.jpg';
-        if (role === 'student') {
-            logoSrc = '../assets/cbit-logo.jpg';
+      if (user) {
+        const snap = await getDoc(doc(db, "users", user.uid));
+        if (snap.exists()) {
+          role = snap.data().role || "student";
         }
-        
-        nav.innerHTML = `
-            <div class="nav-brand">
-                <a href="${logoHref}">
-                    <img src="${logoSrc}" alt="Smart Library">
-                </a>
-            </div>
-            <div class="nav-title">
-                <h1>Smart Library</h1>
-            </div>
-            <ul class="nav-links">
-                ${links.map(link => {
-                    const isActive = currentPage === link.href.split('/').pop();
-                    const linkClass = isActive ? 'active' : '';
-                    const onClick = link.action ? `onclick="UI.handleNavClick('${link.action}')"` : '';
-                    return `
-                        <li>
-                            <a href="${link.href}" class="${linkClass}" ${onClick}>
-                                ${link.label}
-                            </a>
-                        </li>
-                    `;
-                }).join('')}
-            </ul>
-        `;
-    },
+      }
 
-    handleNavClick(action) {
-        if (action === 'logout') {
-            Auth.logout();
-        }
-    },
+      const links = this.navConfig[role];
+      const currentPage = window.location.pathname.split("/").pop();
 
-    renderFooter() {
-        const footer = document.querySelector('.glass-footer');
-        if (!footer) return;
+      const logoSrc =
+        role === "guest"
+          ? "assets/cbit-logo.jpg"
+          : "../assets/cbit-logo.jpg";
 
-        const year = new Date().getFullYear();
-        footer.innerHTML = `
-            <div class="footer-content">
-                <div class="footer-col">
-                    <h4>Quick Links</h4>
-                    <ul>
-                        <li><a href="index.html">Home</a></li>
-                        <li><a href="about.html">About Us</a></li>
-                        <li><a href="books.html">Browse Books</a></li>
-                        <li><a href="https://cbitkolar.edu.in/">College Website</a></li>
-                    </ul>
-                </div>
-                <div class="footer-col">
-                    <h4>Contact</h4>
-                    <p>C. Byre Gowda Institute of Technology</p>
-                    <p>Srinivasapura-Kolar Rd, Thoradevandahalli, Karnataka 563101</p>
-                    <p>Email: library@cbitkolar.edu.in</p>
-                    <p>Phone: +91-80-2345 6789</p>
-                </div>
-                <div class="footer-col">
-                    <h4>Follow Us</h4>
-                    <div class="social-links">
-                        <a href="#"><img src="assets/icon-facebook.png" alt="Facebook"></a>
-                        <a href="#"><img src="assets/icon-twitter.png" alt="Twitter"></a>
-                        <a href="#"><img src="assets/icon-instagram.png" alt="Instagram"></a>
-                        <a href="#"><img src="assets/icon-linkedin.png" alt="LinkedIn"></a>
-                    </div>
-                </div>
-            </div>
-            <div class="footer-bottom">
-                <p>&copy; ${year} C. Byre Gowda Institute of Technology. All rights reserved.</p>
-            </div>
-        `;
-    },
+      nav.innerHTML = `
+        <div class="nav-brand">
+          <a href="${role === "admin" ? "/admin/dashboard.html" : "index.html"}">
+            <img src="${logoSrc}" alt="Smart Library">
+          </a>
+        </div>
 
-    renderBookCard(book) {
-        const available = book.quantity > 0;
-        const user = Auth.getCurrentUser();
-        const coverUrl = book.coverUrl || 'assets/default-book-cover.jpg';
-        
-        return `
-            <div class="book-card glass-card">
-                <img src="${coverUrl}" alt="${book.title}" class="book-cover" loading="lazy">
-                <h3 class="book-title">${book.title}</h3>
-                <p class="book-author">by ${book.author}</p>
-                <p class="book-isbn">ISBN: ${book.isbn || 'N/A'}</p>
-                <span class="book-status ${available ? 'available' : 'unavailable'}">
-                    ${available ? `Available (${book.quantity})` : 'Out of Stock'}
-                </span>
-                <div class="book-actions">
-                    ${available && user ? 
-                        `<button onclick="UI.requestIssue('${book.id}')" class="btn-primary btn-block">
-                            Request Issue
-                        </button>` : 
-                        `<button disabled class="btn-secondary btn-block">
-                            ${available ? 'Login to Issue' : 'Unavailable'}
-                        </button>`
-                    }
-                </div>
-            </div>
-        `;
-    },
+        <div class="nav-title">
+          <h1>Smart Library</h1>
+        </div>
 
-    requestIssue(bookId) {
-        const user = Auth.getCurrentUser();
-        if (!user) {
-            App.showToast('Please login to issue books', 'error');
-            window.location.href = 'login.html';
-            return;
-        }
+        <ul class="nav-links">
+          ${links
+            .map((link) => {
+              if (link.action === "logout") {
+                return `
+                  <li>
+                    <a href="#" id="logoutBtn">Logout</a>
+                  </li>
+                `;
+              }
 
-        const book = App.findBookById(bookId);
-        if (!book || book.quantity <= 0) {
-            App.showToast('Book is not available', 'error');
-            return;
-        }
+              const active =
+                link.href &&
+                currentPage === link.href.split("/").pop()
+                  ? "active"
+                  : "";
 
-        try {
-            App.issueBook(bookId, user.userId);
-            App.showToast('Book requested successfully!');
-            // Refresh the page to update availability after a delay
-            setTimeout(() => window.location.reload(), 1000);
-        } catch (error) {
-            App.showToast(error.message, 'error');
-        }
-    },
+              return `
+                <li>
+                  <a href="${link.href}" class="${active}">
+                    ${link.label}
+                  </a>
+                </li>
+              `;
+            })
+            .join("")}
+        </ul>
+      `;
 
-    renderTransactionRow(transaction, tableId = 'transactionsTableBody') {
-        const tbody = document.getElementById(tableId);
-        if (!tbody) return;
+      const logoutBtn = document.getElementById("logoutBtn");
+      if (logoutBtn) {
+        logoutBtn.onclick = async () => {
+          await signOut(auth);
+          window.location.href = "/login.html";
+        };
+      }
+    });
+  },
 
-        let fine = 0;
-        if (transaction.status === 'issued') {
-            const now = new Date();
-            const dueDate = new Date(transaction.dueDate);
-            if (now > dueDate) {
-                const daysOverdue = Math.floor((now - dueDate) / (1000 * 60 * 60 * 24));
-                fine = daysOverdue * 5; // ₹5 per day
-            }
-        }
+  renderFooter() {
+    const footer = document.querySelector(".glass-footer");
+    if (!footer) return;
 
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${transaction.id}</td>
-            <td>${transaction.bookTitle}</td>
-            <td>${transaction.userName}</td>
-            <td>${transaction.userUSN}</td>
-            <td>${App.formatDate(transaction.issueDate)}</td>
-            <td>${App.formatDate(transaction.dueDate)}</td>
-            <td>${transaction.returnDate ? App.formatDate(transaction.returnDate) : 'N/A'}</td>
-            <td>
-                <span class="status-badge status-${transaction.status}">
-                    ${transaction.status.toUpperCase()}
-                </span>
-            </td>
-            <td>${fine} ₹</td>
-        `;
-        
-        tbody.appendChild(row);
-    },
-
-    showLoading(elementId, message = 'Loading...') {
-        const element = document.getElementById(elementId);
-        if (element) {
-            element.innerHTML = `<div class="loading">${message}</div>`;
-        }
-    },
-
-    showError(elementId, message = 'An error occurred') {
-        const element = document.getElementById(elementId);
-        if (element) {
-            element.innerHTML = `<div class="error-message">${message}</div>`;
-        }
-    },
-
-    showEmpty(elementId, message = 'No data found') {
-        const element = document.getElementById(elementId);
-        if (element) {
-            element.innerHTML = `<div class="no-data">${message}</div>`;
-        }
-    }
+    const year = new Date().getFullYear();
+    footer.innerHTML = `
+      <div class="footer-content">
+        <div class="footer-col">
+          <h4>Quick Links</h4>
+          <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="about.html">About</a></li>
+            <li><a href="books.html">Books</a></li>
+            <li><a href="https://cbitkolar.edu.in/">College Website</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Contact</h4>
+          <p>C. Byre Gowda Institute of Technology</p>
+          <p>Kolar, Karnataka</p>
+          <p>Email: library@cbitkolar.edu.in</p>
+        </div>
+        <div class="footer-col">
+          <h4>Follow Us</h4>
+          <div class="social-links">
+            <a href="#"><img src="assets/icon-facebook.png"></a>
+            <a href="#"><img src="assets/icon-twitter.png"></a>
+            <a href="#"><img src="assets/icon-instagram.png"></a>
+            <a href="#"><img src="assets/icon-linkedin.png"></a>
+          </div>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; ${year} C. Byre Gowda Institute of Technology. All rights reserved.</p>
+      </div>
+    `;
+  }
 };
 
-// Initialize UI on page load
-document.addEventListener('DOMContentLoaded', () => {
-    UI.renderNav();
+document.addEventListener("DOMContentLoaded", () => {
+  UI.renderNav();
+  UI.renderFooter();
 });
+
+export default UI;
