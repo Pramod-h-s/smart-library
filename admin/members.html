@@ -73,6 +73,16 @@
                     </div>
                 </div>
                 <h1>Members</h1>
+                <!-- 🔔 FILTER / APPROVAL BUTTONS (ADD THIS) -->
+<div class="filter-bar" style="margin-bottom: 15px;">
+  <button onclick="Members.loadPending()" class="btn-warning">
+    Pending Approvals
+  </button>
+
+  <button onclick="Members.loadAll()" class="btn-secondary">
+    All Users
+  </button>
+</div>
                 <div class="table-container">
                     <table class="data-table">
                         <thead>
@@ -485,3 +495,4 @@
 </body>
 
 </html>
+
