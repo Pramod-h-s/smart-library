@@ -220,400 +220,406 @@ books: {
     input.click();
   }
 },
-    // ==================== TRANSACTIONS ====================
-    transactions: {
-        init() {
-            this.loadTransactions();
-            this.setupFilters();
-        },
+   // ==================== TRANSACTIONS ====================
+  transactions: {
 
-        loadTransactions() {
-            const transactions = App.getTransactions()
-                .sort((a, b) => new Date(b.issueDate) - new Date(a.issueDate));
-
-            const tbody = document.getElementById('transactionsTableBody');
-            tbody.innerHTML = '';
-
-            if (transactions.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="10" class="no-data">No transactions found.</td></tr>';
-                return;
-            }
-
-            transactions.forEach(transaction => {
-                const row = this.createTransactionRow(transaction);
-                tbody.appendChild(row);
-            });
-        },
-
-        createTransactionRow(transaction) {
-            const row = document.createElement('tr');
-            const fine = App.calculateFine(transaction.dueDate);
-            const isOverdue = transaction.status === 'issued' && new Date() > new Date(transaction.dueDate);
-
-            row.innerHTML = `
-                <td>${transaction.id}</td>
-                <td>${transaction.bookTitle}</td>
-                <td>${transaction.userName}</td>
-                <td>${transaction.userUSN}</td>
-                <td>${App.formatDate(transaction.issueDate)}</td>
-                <td>${App.formatDate(transaction.dueDate)}</td>
-                <td>${transaction.returnDate ? App.formatDate(transaction.returnDate) : 'N/A'}</td>
-                <td>
-                    <span class="status-badge status-${transaction.status} ${isOverdue ? 'overdue' : ''}">
-                        ${transaction.status.toUpperCase()}
-                        ${isOverdue ? ' (OVERDUE)' : ''}
-                    </span>
-                </td>
-                <td>${fine} ₹</td>
-                <td>
-                    <div class="action-buttons">
-                        ${transaction.status === 'issued' ?
-                            `<button onclick="Admin.transactions.forceReturn('${transaction.id}')"
-                                    class="btn-sm btn-warning" title="Force Return">Force Return</button>` :
-                            '<span class="text-muted">-</span>'
-                        }
-                        <button onclick="Admin.transactions.deleteTransaction('${transaction.id}')"
-                                class="btn-sm btn-danger" title="Delete Transaction">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="3 6 5 6 21 6"></polyline>
-                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                            </svg>
-                        </button>
-                    </div>
-                </td>
-            `;
-
-            return row;
-        },
-
-        setupFilters() {
-            const searchInput = document.getElementById('transactionSearch');
-            const statusFilter = document.getElementById('statusFilter');
-
-            if (searchInput) {
-                searchInput.addEventListener('input', () => this.filterTransactions());
-            }
-
-            if (statusFilter) {
-                statusFilter.addEventListener('change', () => this.filterTransactions());
-            }
-        },
-
-        filterTransactions() {
-            const searchTerm = document.getElementById('transactionSearch')?.value.toLowerCase() || '';
-            const status = document.getElementById('statusFilter')?.value || '';
-            
-            const transactions = App.getTransactions().filter(transaction => {
-                const matchesSearch = !searchTerm || 
-                    transaction.bookTitle.toLowerCase().includes(searchTerm) ||
-                    transaction.userName.toLowerCase().includes(searchTerm) ||
-                    transaction.userUSN.toLowerCase().includes(searchTerm) ||
-                    transaction.id.toLowerCase().includes(searchTerm);
-                
-                const matchesStatus = !status || transaction.status === status;
-                
-                return matchesSearch && matchesStatus;
-            });
-
-            const tbody = document.getElementById('transactionsTableBody');
-            tbody.innerHTML = '';
-
-            if (transactions.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="10" class="no-data">No transactions found matching your criteria.</td></tr>';
-                return;
-            }
-
-            transactions.forEach(transaction => {
-                const row = this.createTransactionRow(transaction);
-                tbody.appendChild(row);
-            });
-        },
-
-        forceReturn(transactionId) {
-            if (!confirm('Force return this book?')) {
-                return;
-            }
-
-            try {
-                App.returnBook(transactionId);
-                App.showToast('Book returned successfully');
-                if (document.getElementById('totalBooks')) {
-                    Admin.dashboard.updateStats();
-                }
-                this.loadTransactions();
-            } catch (error) {
-                App.showToast(error.message, 'error');
-            }
-        },
-
-        deleteTransaction(transactionId) {
-            if (!confirm('Are you sure you want to delete this transaction? This action cannot be undone.')) {
-                return;
-            }
-
-            try {
-                const transactions = App.getTransactions();
-                const updated = transactions.filter(t => t.id !== transactionId);
-                App.saveTransactions(updated);
-                App.showToast('Transaction deleted successfully');
-                if (document.getElementById('totalBooks')) {
-                    Admin.dashboard.updateStats();
-                }
-                this.loadTransactions();
-
-            } catch (error) {
-                App.showToast('Failed to delete transaction: ' + error.message, 'error');
-            }
-        },
-
-        exportTransactionCSV() {
-            const transactions = App.getTransactions();
-            if (transactions.length === 0) {
-                App.showToast('No transactions to export', 'error');
-                return;
-            }
-
-            const csvData = transactions.map(transaction => ({
-                transactionId: transaction.id,
-                bookTitle: transaction.bookTitle,
-                bookId: transaction.bookId,
-                userName: transaction.userName,
-                userUSN: transaction.userUSN,
-                issueDate: transaction.issueDate,
-                dueDate: transaction.dueDate,
-                returnDate: transaction.returnDate || '',
-                status: transaction.status,
-                fine: App.calculateFine(transaction.dueDate)
-            }));
-
-            App.exportToCSV(csvData, 'transactions');
-        }
+    async init() {
+      await this.loadTransactions();
+      this.setupFilters();
     },
 
-    // ==================== ISSUE/RETURN SYSTEM ====================
-    issueReturn: {
-        init() {
-            this.scanner = null;
-            this.selectedBook = null;
-            this.selectedStudent = null;
-            this.setupScanner();
-            this.setupEventListeners();
-        },
+    async loadTransactions() {
+      const transactions = (await getFirestoreTransactions())
+        .sort((a, b) => b.issueDate - a.issueDate);
 
-        setupEventListeners() {
-            const bookSearch = document.getElementById('bookSearch');
-            const studentSearch = document.getElementById('studentSearch');
+      const tbody = document.getElementById("transactionsTableBody");
+      tbody.innerHTML = "";
 
-            if (bookSearch) {
-                bookSearch.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        this.searchBook();
-                    }
-                });
+      if (transactions.length === 0) {
+        tbody.innerHTML =
+          `<tr><td colspan="10" class="no-data">No transactions found.</td></tr>`;
+        return;
+      }
+
+      transactions.forEach(tx => {
+        tbody.appendChild(this.createTransactionRow(tx));
+      });
+    },
+
+    createTransactionRow(transaction) {
+      const row = document.createElement("tr");
+      const fine = calculateFine(transaction.dueDate);
+      const isOverdue =
+        transaction.status === "issued" &&
+        new Date() > transaction.dueDate;
+
+      row.innerHTML = `
+        <td>${transaction.id}</td>
+        <td>${transaction.bookTitle}</td>
+        <td>${transaction.userName}</td>
+        <td>${transaction.userUSN}</td>
+        <td>${transaction.issueDate.toLocaleDateString()}</td>
+        <td>${transaction.dueDate.toLocaleDateString()}</td>
+        <td>${transaction.returnDate ? transaction.returnDate.toLocaleDateString() : "N/A"}</td>
+        <td>
+          <span class="status-badge status-${transaction.status} ${isOverdue ? "overdue" : ""}">
+            ${transaction.status.toUpperCase()}
+            ${isOverdue ? " (OVERDUE)" : ""}
+          </span>
+        </td>
+        <td>${fine} ₹</td>
+        <td>
+          <div class="action-buttons">
+            ${
+              transaction.status === "issued"
+                ? `<button class="btn-sm btn-warning"
+                           onclick="Admin.transactions.forceReturn('${transaction.id}')">
+                      Force Return
+                   </button>`
+                : `<span class="text-muted">-</span>`
             }
+            <button class="btn-sm btn-danger"
+                    onclick="Admin.transactions.deleteTransaction('${transaction.id}')">
+              Delete
+            </button>
+          </div>
+        </td>
+      `;
 
-            if (studentSearch) {
-                studentSearch.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        this.searchStudent();
-                    }
-                });
-            }
-        },
+      return row;
+    },
 
-        setupScanner() {
-            // Check if camera is available
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                document.getElementById('scannerError').style.display = 'block';
-                return;
-            }
+    setupFilters() {
+      const searchInput = document.getElementById("transactionSearch");
+      const statusFilter = document.getElementById("statusFilter");
 
-            // Initialize scanner (this is a placeholder - you would need to integrate with a real barcode scanner library)
-            this.scanner = {
-                start: () => {
-                    // Placeholder for scanner implementation
-                    console.log('Scanner started');
-                },
-                stop: () => {
-                    // Placeholder for scanner implementation
-                    console.log('Scanner stopped');
-                }
-            };
-        },
+      if (searchInput)
+        searchInput.addEventListener("input", () => this.filterTransactions());
 
-        searchBook() {
-            const searchTerm = document.getElementById('bookSearch').value.trim();
-            if (!searchTerm) {
-                App.showToast('Please enter a search term', 'error');
-                return;
-            }
+      if (statusFilter)
+        statusFilter.addEventListener("change", () => this.filterTransactions());
+    },
 
-            const book = App.findBookById(searchTerm) || 
-                        App.getBooks().find(b => 
-                            b.title.toLowerCase().includes(searchTerm.toLowerCase())
-                        );
+    async filterTransactions() {
+      const searchTerm =
+        document.getElementById("transactionSearch")?.value.toLowerCase() || "";
+      const status =
+        document.getElementById("statusFilter")?.value || "";
 
-            if (!book) {
-                App.showToast('Book not found', 'error');
-                return;
-            }
+      const transactions = await getFirestoreTransactions();
 
-            this.selectedBook = book;
-            this.displayBookInfo(book);
-        },
+      const filtered = transactions.filter(tx => {
+        const matchesSearch =
+          !searchTerm ||
+          tx.bookTitle.toLowerCase().includes(searchTerm) ||
+          tx.userName.toLowerCase().includes(searchTerm) ||
+          tx.userUSN.toLowerCase().includes(searchTerm) ||
+          tx.id.toLowerCase().includes(searchTerm);
 
-        displayBookInfo(book) {
-            const bookInfo = `
-                <div class="book-info">
-                    <img src="${book.coverUrl || 'assets/book-placeholder.jpg'}" 
-                         alt="${book.title}" class="book-cover">
-                    <div class="book-details">
-                        <h4>${book.title}</h4>
-                        <p><strong>Author:</strong> ${book.author}</p>
-                        <p><strong>ISBN:</strong> ${book.isbn || 'N/A'}</p>
-                        <p><strong>Available:</strong> ${book.quantity} copies</p>
-                        <p><strong>Status:</strong> 
-                            <span class="availability-badge ${book.quantity > 0 ? 'available' : 'unavailable'}">
-                                ${book.quantity > 0 ? 'Available' : 'Out of Stock'}
-                            </span>
-                        </p>
-                    </div>
-                </div>
-            `;
+        const matchesStatus = !status || tx.status === status;
+        return matchesSearch && matchesStatus;
+      });
 
-            document.getElementById('selectedBookInfo').innerHTML = bookInfo;
-            document.getElementById('bookResults').style.display = 'block';
-            
-            // Enable/disable issue button based on availability
-            document.getElementById('issueBtn').disabled = book.quantity <= 0;
-            document.getElementById('returnBtn').disabled = true;
-        },
+      const tbody = document.getElementById("transactionsTableBody");
+      tbody.innerHTML = "";
 
-        searchStudent() {
-            const searchTerm = document.getElementById('studentSearch').value.trim();
-            if (!searchTerm) {
-                App.showToast('Please enter a search term', 'error');
-                return;
-            }
+      if (filtered.length === 0) {
+        tbody.innerHTML =
+          `<tr><td colspan="10" class="no-data">No transactions found.</td></tr>`;
+        return;
+      }
 
-            const users = App.getUsers().filter(u => u.role === 'student');
-            const student = users.find(u => 
-                u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                u.usn.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                u.email.toLowerCase().includes(searchTerm.toLowerCase())
-            );
+      filtered.forEach(tx => {
+        tbody.appendChild(this.createTransactionRow(tx));
+      });
+    },
 
-            if (!student) {
-                App.showToast('Student not found', 'error');
-                document.getElementById('studentResults').innerHTML = '';
-                return;
-            }
+    async forceReturn(transactionId) {
+      if (!confirm("Force return this book?")) return;
 
-            this.selectedStudent = student;
-            this.displayStudentInfo(student);
-        },
+      await updateDoc(doc(db, "transactions", transactionId), {
+        status: "returned",
+        returnDate: Timestamp.now()
+      });
 
-        displayStudentInfo(student) {
-            const studentInfo = `
-                <div class="student-card glass-card">
-                    <h4>${student.name}</h4>
-                    <p><strong>USN:</strong> ${student.usn}</p>
-                    <p><strong>Email:</strong> ${student.email}</p>
-                    <p><strong>Phone:</strong> ${student.phone}</p>
-                </div>
-            `;
+      alert("Book returned successfully");
+      this.loadTransactions();
+    },
 
-            document.getElementById('studentResults').innerHTML = studentInfo;
-            
-            // Enable action buttons if both book and student are selected
-            const issueBtn = document.getElementById('issueBtn');
-            const returnBtn = document.getElementById('returnBtn');
-            
-            if (this.selectedBook && this.selectedBook.quantity > 0) {
-                issueBtn.disabled = false;
-            }
-            returnBtn.disabled = false;
-        },
+    async deleteTransaction(transactionId) {
+      if (!confirm("Delete this transaction permanently?")) return;
 
-        issueBook() {
-            if (!this.selectedBook || !this.selectedStudent) {
-                App.showToast('Please select both book and student', 'error');
-                return;
-            }
+      await deleteDoc(doc(db, "transactions", transactionId));
+      alert("Transaction deleted");
+      this.loadTransactions();
+    },
 
-            if (this.selectedBook.quantity <= 0) {
-                App.showToast('Book is not available', 'error');
-                return;
-            }
+    async exportTransactionCSV() {
+      const transactions = await getFirestoreTransactions();
 
-            try {
-                App.issueBook(this.selectedBook.id, this.selectedStudent.userId);
-                App.showToast('Book issued successfully');
-                if (document.getElementById('totalBooks')) {
-                    Admin.dashboard.updateStats();
-                }
-                this.resetForm();
-                this.loadTransactions();
-            } catch (error) {
-                App.showToast(error.message, 'error');
-            }
-        },
+      if (transactions.length === 0) {
+        alert("No transactions to export");
+        return;
+      }
 
-        returnBook() {
-            if (!this.selectedBook || !this.selectedStudent) {
-                App.showToast('Please select both book and student', 'error');
-                return;
-            }
+      const csvData = transactions.map(tx => ({
+        transactionId: tx.id,
+        bookTitle: tx.bookTitle,
+        userName: tx.userName,
+        userUSN: tx.userUSN,
+        issueDate: tx.issueDate.toISOString(),
+        dueDate: tx.dueDate.toISOString(),
+        returnDate: tx.returnDate ? tx.returnDate.toISOString() : "",
+        status: tx.status,
+        fine: calculateFine(tx.dueDate)
+      }));
 
-            // Find active transaction
-            const transactions = App.getTransactions();
-            const transaction = transactions.find(t => 
-                t.bookId === this.selectedBook.id && 
-                t.userId === this.selectedStudent.userId &&
-                t.status === 'issued'
-            );
-
-            if (!transaction) {
-                App.showToast('No active issue found for this book and student', 'error');
-                return;
-            }
-
-            try {
-                App.returnBook(transaction.id);
-                App.showToast('Book returned successfully');
-                if (document.getElementById('totalBooks')) {
-                    Admin.dashboard.updateStats();
-                }
-                this.resetForm();
-                this.loadTransactions();
-            } catch (error) {
-                App.showToast(error.message, 'error');
-            }
-        },
-
-        resetForm() {
-            this.selectedBook = null;
-            this.selectedStudent = null;
-            document.getElementById('bookSearch').value = '';
-            document.getElementById('studentSearch').value = '';
-            document.getElementById('selectedBookInfo').innerHTML = '';
-            document.getElementById('studentResults').innerHTML = '';
-            document.getElementById('bookResults').style.display = 'none';
-        },
-
-        loadTransactions() {
-            // Refresh the transactions count on dashboard if on that page
-            if (typeof Admin.dashboard !== 'undefined' && document.getElementById('totalBooks')) {
-                Admin.dashboard.updateStats();
-            }
-        }
+      App.exportToCSV(csvData, "transactions");
     }
+  }
 };
 
-// Initialize admin functionality
-document.addEventListener('DOMContentLoaded', () => {
-    // Admin functionality is initialized by individual page scripts
-
+// INIT
+document.addEventListener("DOMContentLoaded", () => {
+  if (Admin.transactions) {
+    Admin.transactions.init();
+  }
 });
+  // ==================== ISSUE / RETURN SYSTEM (FIRESTORE) ====================
+import { db } from "./firebase.js";
+import {
+  collection,
+  getDocs,
+  query,
+  where,
+  addDoc,
+  updateDoc,
+  doc,
+  Timestamp
+} from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+
+Admin.issueReturn = {
+
+  init() {
+    this.selectedBook = null;
+    this.selectedStudent = null;
+    this.setupEventListeners();
+  },
+
+  setupEventListeners() {
+    const bookSearch = document.getElementById("bookSearch");
+    const studentSearch = document.getElementById("studentSearch");
+
+    if (bookSearch) {
+      bookSearch.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          this.searchBook();
+        }
+      });
+    }
+
+    if (studentSearch) {
+      studentSearch.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          this.searchStudent();
+        }
+      });
+    }
+  },
+
+  // ==================== BOOK SEARCH ====================
+  async searchBook() {
+    const searchTerm = document.getElementById("bookSearch").value.trim();
+    if (!searchTerm) {
+      alert("Enter book title / ID");
+      return;
+    }
+
+    const snap = await getDocs(collection(db, "books"));
+    let foundBook = null;
+
+    snap.forEach(docSnap => {
+      const b = docSnap.data();
+      if (
+        docSnap.id === searchTerm ||
+        b.title.toLowerCase().includes(searchTerm.toLowerCase())
+      ) {
+        foundBook = { id: docSnap.id, ...b };
+      }
+    });
+
+    if (!foundBook) {
+      alert("Book not found");
+      return;
+    }
+
+    this.selectedBook = foundBook;
+    this.displayBookInfo(foundBook);
+  },
+
+  displayBookInfo(book) {
+    document.getElementById("selectedBookInfo").innerHTML = `
+      <div class="book-info">
+        <img src="${book.coverUrl || '../assets/book-placeholder.jpg'}"
+             class="book-cover">
+        <div class="book-details">
+          <h4>${book.title}</h4>
+          <p><strong>Author:</strong> ${book.author}</p>
+          <p><strong>ISBN:</strong> ${book.isbn || "N/A"}</p>
+          <p><strong>Available:</strong> ${book.quantity}</p>
+          <p>
+            <span class="availability-badge ${
+              book.quantity > 0 ? "available" : "unavailable"
+            }">
+              ${book.quantity > 0 ? "Available" : "Out of Stock"}
+            </span>
+          </p>
+        </div>
+      </div>
+    `;
+
+    document.getElementById("bookResults").style.display = "block";
+    document.getElementById("issueBtn").disabled = book.quantity <= 0;
+    document.getElementById("returnBtn").disabled = true;
+  },
+
+  // ==================== STUDENT SEARCH ====================
+  async searchStudent() {
+    const searchTerm = document.getElementById("studentSearch").value.trim();
+    if (!searchTerm) {
+      alert("Enter student name / USN / email");
+      return;
+    }
+
+    const q = query(
+      collection(db, "users"),
+      where("role", "==", "student")
+    );
+
+    const snap = await getDocs(q);
+    let student = null;
+
+    snap.forEach(docSnap => {
+      const u = docSnap.data();
+      if (
+        u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        u.usn.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        u.email.toLowerCase().includes(searchTerm.toLowerCase())
+      ) {
+        student = { id: docSnap.id, ...u };
+      }
+    });
+
+    if (!student) {
+      alert("Student not found");
+      return;
+    }
+
+    this.selectedStudent = student;
+    this.displayStudentInfo(student);
+  },
+
+  displayStudentInfo(student) {
+    document.getElementById("studentResults").innerHTML = `
+      <div class="student-card glass-card">
+        <h4>${student.name}</h4>
+        <p><strong>USN:</strong> ${student.usn}</p>
+        <p><strong>Email:</strong> ${student.email}</p>
+      </div>
+    `;
+
+    document.getElementById("issueBtn").disabled =
+      !this.selectedBook || this.selectedBook.quantity <= 0;
+
+    document.getElementById("returnBtn").disabled = false;
+  },
+
+  // ==================== ISSUE BOOK ====================
+  async issueBook() {
+    if (!this.selectedBook || !this.selectedStudent) {
+      alert("Select book and student");
+      return;
+    }
+
+    if (this.selectedBook.quantity <= 0) {
+      alert("Book not available");
+      return;
+    }
+
+    // Create transaction
+    await addDoc(collection(db, "transactions"), {
+      bookId: this.selectedBook.id,
+      bookTitle: this.selectedBook.title,
+      userId: this.selectedStudent.id,
+      userName: this.selectedStudent.name,
+      userUSN: this.selectedStudent.usn,
+      issueDate: Timestamp.now(),
+      dueDate: Timestamp.fromDate(
+        new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
+      ),
+      returnDate: null,
+      status: "issued"
+    });
+
+    // Reduce book quantity
+    await updateDoc(doc(db, "books", this.selectedBook.id), {
+      quantity: this.selectedBook.quantity - 1
+    });
+
+    alert("Book issued successfully");
+    this.resetForm();
+  },
+
+  // ==================== RETURN BOOK ====================
+  async returnBook() {
+    if (!this.selectedBook || !this.selectedStudent) {
+      alert("Select book and student");
+      return;
+    }
+
+    const q = query(
+      collection(db, "transactions"),
+      where("bookId", "==", this.selectedBook.id),
+      where("userId", "==", this.selectedStudent.id),
+      where("status", "==", "issued")
+    );
+
+    const snap = await getDocs(q);
+
+    if (snap.empty) {
+      alert("No active issue found");
+      return;
+    }
+
+    const txDoc = snap.docs[0];
+
+    // Mark transaction returned
+    await updateDoc(txDoc.ref, {
+      status: "returned",
+      returnDate: Timestamp.now()
+    });
+
+    // Increase book quantity
+    await updateDoc(doc(db, "books", this.selectedBook.id), {
+      quantity: this.selectedBook.quantity + 1
+    });
+
+    alert("Book returned successfully");
+    this.resetForm();
+  },
+
+  // ==================== RESET ====================
+  resetForm() {
+    this.selectedBook = null;
+    this.selectedStudent = null;
+    document.getElementById("bookSearch").value = "";
+    document.getElementById("studentSearch").value = "";
+    document.getElementById("selectedBookInfo").innerHTML = "";
+    document.getElementById("studentResults").innerHTML = "";
+    document.getElementById("bookResults").style.display = "none";
+  }
+};
+
+
