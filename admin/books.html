@@ -58,7 +58,7 @@
             <header class="admin-header glass-card">
                 <h1>Books Manager</h1>
                 <div class="header-actions">
-                    <button onclick="Admin.books.showAddBookModal()" class="btn-primary">
+                    <button onclick="document.getElementById('bookModal').style.display='flex'" class="btn-primary">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="12" y1="5" x2="12" y2="19"></line>
                             <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -68,7 +68,7 @@
                     <button onclick="Admin.books.importCSV()" class="btn-success">
                         Import CSV
                     </button>
-                    <button onclick="Admin.books.exportCSV()" class="btn-warning">
+                    <button onclick="exportNotReady()" class="btn-warning">
                         Export CSV
                     </button>
                 </div>
@@ -163,4 +163,3 @@
 </body>
 
 </html>
-
