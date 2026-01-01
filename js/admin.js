@@ -2,409 +2,224 @@
  * Smart Library - Admin Panel Functionality
  * Books management, transactions, issue/return operations
  */
+// ==================== FIRESTORE HELPERS ====================
+async function getFirestoreTransactions() {
+  const snap = await getDocs(collection(db, "transactions"));
+  const transactions = [];
 
+  snap.forEach(docSnap => {
+    const data = docSnap.data();
+    transactions.push({
+      id: docSnap.id,
+      ...data,
+      issueDate: data.issueDate?.toDate(),
+      dueDate: data.dueDate?.toDate(),
+      returnDate: data.returnDate ? data.returnDate.toDate() : null
+    });
+  });
+
+  return transactions;
+}
+
+function calculateFine(dueDate) {
+  if (!dueDate) return 0;
+  const now = new Date();
+  const days = Math.floor((now - dueDate) / (1000 * 60 * 60 * 24));
+  return days > 0 ? days * 5 : 0;
+}
 const Admin = {
     // ==================== DASHBOARD ====================
-    dashboard: {
-        init() {
-            this.updateStats();
-            this.loadRecentTransactions();
-        },
+import { db } from "./firebase.js";
+import {
+  collection,
+  getDocs,
+  query,
+  where
+} from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
-        updateStats() {
-            const books = App.getBooks();
-            const transactions = App.getTransactions();
-            const users = App.getUsers();
+export async function loadDashboardStats() {
 
-            // Total books
-            const totalBooksEl = document.getElementById('totalBooks');
-            if (totalBooksEl) totalBooksEl.textContent = books.length;
+  // Books
+  const booksSnap = await getDocs(collection(db, "books"));
+  let totalBooks = 0;
+  let availableCopies = 0;
+  const categories = new Set();
 
-            // Currently issued books
-            const issuedCount = transactions.filter(t => t.status === 'issued').length;
-            const issuedBooksEl = document.getElementById('issuedBooks');
-            if (issuedBooksEl) issuedBooksEl.textContent = issuedCount;
+  booksSnap.forEach(doc => {
+    totalBooks++;
+    const b = doc.data();
+    availableCopies += Number(b.quantity || 0);
+    categories.add(b.category);
+  });
 
-            // Registered users (excluding admin)
-            const registeredUsers = users.filter(u => u.role === 'student').length;
-            const registeredUsersEl = document.getElementById('registeredUsers');
-            if (registeredUsersEl) registeredUsersEl.textContent = registeredUsers;
+  // Transactions
+  const issuedSnap = await getDocs(
+    query(collection(db, "transactions"), where("status", "==", "issued"))
+  );
 
-            // Overdue books
-            const overdueCount = this.calculateOverdueBooks();
-            const overdueBooksEl = document.getElementById('overdueBooks');
-            if (overdueBooksEl) overdueBooksEl.textContent = overdueCount;
+  let overdue = 0;
+  const now = new Date();
 
-            // Available Copies = sum of all book quantities - sum of all issued books
-            const totalQuantity = books.reduce((sum, book) => sum + book.quantity, 0);
-            const availableCopies = totalQuantity - issuedCount;
-            const availableCopiesEl = document.getElementById('availableCopies');
-            if (availableCopiesEl) availableCopiesEl.textContent = availableCopies;
+  issuedSnap.forEach(doc => {
+    const due = doc.data().dueDate?.toDate();
+    if (due && now > due) overdue++;
+  });
 
-            // Total Categories
-            const categories = [...new Set(books.map(book => book.category))];
-            const totalCategoriesEl = document.getElementById('totalCategories');
-            if (totalCategoriesEl) totalCategoriesEl.textContent = categories.length;
-        },
+  // Users
+  const usersSnap = await getDocs(
+    query(collection(db, "users"), where("role", "==", "student"))
+  );
 
-        calculateOverdueBooks() {
-            const transactions = App.getTransactions();
-            const now = new Date();
-            
-            return transactions.filter(t => {
-                if (t.status !== 'issued') return false;
-                const dueDate = new Date(t.dueDate);
-                return now > dueDate;
-            }).length;
-        },
+  // UI update
+  totalBooksEl.textContent = totalBooks;
+  issuedBooks.textContent = issuedSnap.size;
+  registeredUsers.textContent = usersSnap.size;
+  overdueBooks.textContent = overdue;
+  availableCopiesEl.textContent = availableCopies;
+  totalCategories.textContent = categories.size;
+}
+   // ==================== BOOKS MANAGEMENT (FIRESTORE ONLY) ====================
+books: {
 
-        loadRecentTransactions() {
-            const transactions = App.getTransactions()
-                .sort((a, b) => new Date(b.issueDate) - new Date(a.issueDate))
-                .slice(0, 10);
+  async init() {
+    await this.loadBooks();
+    this.setupForm();
+  },
 
-            const tbody = document.getElementById('recentTransactionsBody');
-            tbody.innerHTML = '';
+  async loadBooks() {
+    const tbody = document.getElementById("booksTableBody");
+    tbody.innerHTML = "";
 
-            if (transactions.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="no-data">No recent transactions.</td></tr>';
-                return;
-            }
+    const snap = await getDocs(collection(db, "books"));
 
-            transactions.forEach(transaction => {
-                const row = document.createElement('tr');
-                const fine = App.calculateFine(transaction.dueDate);
-                
-                row.innerHTML = `
-                    <td>${transaction.id}</td>
-                    <td>${transaction.bookTitle}</td>
-                    <td>${transaction.userName}</td>
-                    <td>${transaction.userUSN}</td>
-                    <td>
-                        <span class="status-badge status-${transaction.status}">
-                            ${transaction.status.toUpperCase()}
-                        </span>
-                    </td>
-                    <td>${App.formatDate(transaction.dueDate)}</td>
-                `;
-                
-                tbody.appendChild(row);
-            });
-        }
-    },
+    if (snap.empty) {
+      tbody.innerHTML =
+        `<tr><td colspan="9" class="no-data">No books available.</td></tr>`;
+      return;
+    }
 
-    // ==================== BOOKS MANAGEMENT ====================
-    books: {
-        init() {
-            this.loadBooks();
-            this.setupFilters();
-            this.setupForm();
-        },
+    snap.forEach(docSnap => {
+      const book = { id: docSnap.id, ...docSnap.data() };
+      tbody.appendChild(this.createBookRow(book));
+    });
+  },
 
-        loadBooks() {
-            const books = App.getBooks();
-            const tbody = document.getElementById('booksTableBody');
-            tbody.innerHTML = '';
+  createBookRow(book) {
+    const row = document.createElement("tr");
 
-            if (books.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="9" class="no-data">No books available.</td></tr>';
-                return;
-            }
+    row.innerHTML = `
+      <td>
+        <img src="${book.coverUrl || '../assets/book-placeholder.jpg'}"
+             class="book-thumbnail"
+             alt="${book.title}">
+      </td>
+      <td>${book.title}</td>
+      <td>${book.author}</td>
+      <td>${book.isbn || "N/A"}</td>
+      <td>${book.category}</td>
+      <td>
+        <span class="availability-badge ${book.quantity > 0 ? 'available' : 'unavailable'}">
+          ${book.quantity > 0 ? `Yes (${book.quantity})` : 'No'}
+        </span>
+      </td>
+      <td>
+        <button class="btn-sm btn-danger"
+                onclick="Admin.books.deleteBook('${book.id}')">
+          Delete
+        </button>
+      </td>
+    `;
 
-            books.forEach(book => {
-                const row = this.createBookRow(book);
-                tbody.appendChild(row);
-            });
-        },
+    return row;
+  },
 
-        createBookRow(book) {
-            const row = document.createElement('tr');
-            
-            row.innerHTML = `
-                <td>
-                    <img src="${book.coverUrl || 'assets/book-placeholder.jpg'}" 
-                         alt="${book.title}" class="book-thumbnail" loading="lazy">
-                </td>
-                <td>${book.id}</td>
-                <td>${book.title}</td>
-                <td>${book.author}</td>
-                <td>${book.isbn || 'N/A'}</td>
-                <td>${book.category}</td>
-                <td>
-                    <span class="availability-badge ${book.quantity > 0 ? 'available' : 'unavailable'}">
-                        ${book.quantity > 0 ? `Yes (${book.quantity})` : 'No'}
-                    </span>
-                </td>
-                <td>${book.quantity}</td>
-                <td>
-                    <div class="action-buttons">
-                        <button onclick="Admin.books.editBook('${book.id}')" 
-                                class="btn-sm btn-primary" title="Edit">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                            </svg>
-                        </button>
-                        <button onclick="Admin.books.deleteBook('${book.id}')" 
-                                class="btn-sm btn-danger" title="Delete">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="3 6 5 6 21 6"></polyline>
-                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                <line x1="10" y1="11" x2="10" y2="17"></line>
-                                <line x1="14" y1="11" x2="14" y2="17"></line>
-                            </svg>
-                        </button>
-                    </div>
-                </td>
-            `;
-            
-            return row;
-        },
+  setupForm() {
+    const form = document.getElementById("bookForm");
+    if (!form) return;
 
-        setupFilters() {
-            const searchInput = document.getElementById('bookSearch');
-            const categoryFilter = document.getElementById('categoryFilter');
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      await this.saveBook();
+    });
+  },
 
-            if (searchInput) {
-                searchInput.addEventListener('input', () => this.filterBooks());
-            }
+  async saveBook() {
+    const title = bookTitle.value.trim();
+    const author = bookAuthor.value.trim();
+    const isbn = bookISBN.value.trim();
+    const category = bookCategory.value.trim();
+    const quantity = Number(bookQuantity.value);
+    const coverUrl = bookCover.value.trim();
 
-            if (categoryFilter) {
-                // Populate categories
-                const books = App.getBooks();
-                const categories = [...new Set(books.map(book => book.category))];
-                
-                categories.forEach(category => {
-                    const option = document.createElement('option');
-                    option.value = category;
-                    option.textContent = category;
-                    categoryFilter.appendChild(option);
-                });
+    if (!title || !author || !category || quantity < 1) {
+      alert("Please fill all required fields");
+      return;
+    }
 
-                categoryFilter.addEventListener('change', () => this.filterBooks());
-            }
-        },
+    await addDoc(collection(db, "books"), {
+      title,
+      author,
+      isbn,
+      category,
+      quantity,
+      coverUrl,
+      createdAt: Timestamp.now()
+    });
 
-        filterBooks() {
-            const searchTerm = document.getElementById('bookSearch')?.value.toLowerCase() || '';
-            const category = document.getElementId('categoryFilter')?.value || '';
-            
-            const books = App.getBooks().filter(book => {
-                const matchesSearch = !searchTerm || 
-                    book.title.toLowerCase().includes(searchTerm) ||
-                    book.author.toLowerCase().includes(searchTerm) ||
-                    book.id.toLowerCase().includes(searchTerm);
-                
-                const matchesCategory = !category || book.category === category;
-                
-                return matchesSearch && matchesCategory;
-            });
+    alert("Book added successfully");
+    document.getElementById("bookForm").reset();
+    this.loadBooks();
+  },
 
-            const tbody = document.getElementById('booksTableBody');
-            tbody.innerHTML = '';
+  async deleteBook(bookId) {
+    if (!confirm("Are you sure you want to delete this book?")) return;
 
-            if (books.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="9" class="no-data">No books found matching your criteria.</td></tr>';
-                return;
-            }
+    await deleteDoc(doc(db, "books", bookId));
+    alert("Book deleted");
+    this.loadBooks();
+  },
 
-            books.forEach(book => {
-                const row = this.createBookRow(book);
-                tbody.appendChild(row);
-            });
-        },
+  importCSV() {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".csv";
 
-        setupForm() {
-            const form = document.getElementById('bookForm');
-            if (form) {
-                form.addEventListener('submit', (e) => {
-                    e.preventDefault();
-                    this.saveBook();
-                });
-            }
-        },
+    input.onchange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
 
-        showAddBookModal() {
-            document.getElementById('modalTitle').textContent = 'Add New Book';
-            document.getElementById('bookId').value = '';
-            document.getElementById('bookForm').reset();
-            document.getElementById('bookModal').style.display = 'flex';
-        },
+      const text = await file.text();
+      const rows = text.split("\n").filter(r => r.trim());
 
-        editBook(bookId) {
-            const book = App.findBookById(bookId);
-            if (!book) {
-                App.showToast('Book not found', 'error');
-                return;
-            }
+      const headers = rows[0].split(",").map(h => h.trim());
 
-            document.getElementById('modalTitle').textContent = 'Edit Book';
-            document.getElementById('bookId').value = book.id;
-            document.getElementById('bookTitle').value = book.title;
-            document.getElementById('bookAuthor').value = book.author;
-            document.getElementById('bookISBN').value = book.isbn || '';
-            document.getElementById('bookCategory').value = book.category;
-            document.getElementById('bookQuantity').value = book.quantity;
-            document.getElementById('bookCover').value = book.coverUrl || '';
-            document.getElementById('bookModal').style.display = 'flex';
-        },
+      for (let i = 1; i < rows.length; i++) {
+        const values = rows[i].split(",");
+        if (values.length < headers.length) continue;
 
-        deleteBook(bookId) {
-            if (!confirm('Are you sure you want to delete this book?')) {
-                return;
-            }
+        const book = {};
+        headers.forEach((h, idx) => {
+          book[h] = values[idx]?.trim();
+        });
 
-            const books = App.getBooks();
-            const updatedBooks = books.filter(book => book.id !== bookId);
-            
-            App.saveBooks(updatedBooks);
-            App.showToast('Book deleted successfully');
-            this.loadBooks();
-        },
+        await addDoc(collection(db, "books"), {
+          title: book.title,
+          author: book.author,
+          isbn: book.isbn || "",
+          category: book.category,
+          quantity: Number(book.quantity || 1),
+          coverUrl: book.coverUrl || "",
+          createdAt: Timestamp.now()
+        });
+      }
 
-        saveBook() {
-            const bookId = document.getElementById('bookId').value;
-            const title = document.getElementById('bookTitle').value.trim();
-            const author = document.getElementById('bookAuthor').value.trim();
-            const isbn = document.getElementById('bookISBN').value.trim();
-            const category = document.getElementById('bookCategory').value.trim();
-            const quantity = parseInt(document.getElementById('bookQuantity').value);
-            const coverUrl = document.getElementById('bookCover').value.trim();
+      alert("CSV imported successfully");
+      this.loadBooks();
+    };
 
-            if (!title || !author || !category || !quantity || quantity < 1) {
-                App.showToast('Please fill all required fields', 'error');
-                return;
-            }
-
-            const books = App.getBooks();
-            
-            if (bookId) {
-                // Update existing book
-                const bookIndex = books.findIndex(book => book.id === bookId);
-                if (bookIndex !== -1) {
-                    books[bookIndex] = {
-                        ...books[bookIndex],
-                        title,
-                        author,
-                        isbn,
-                        category,
-                        quantity,
-                        coverUrl,
-                        available: quantity > 0
-                    };
-                }
-                App.showToast('Book updated successfully');
-            } else {
-                // Add new book
-                const newBook = {
-                    id: App.generateBookId(),
-                    title,
-                    author,
-                    isbn,
-                    category,
-                    quantity,
-                    coverUrl,
-                    available: quantity > 0,
-                    createdAt: new Date().toISOString()
-                };
-                books.push(newBook);
-                App.showToast('Book added successfully');
-            }
-
-            App.saveBooks(books);
-            this.closeModal();
-            this.loadBooks();
-        },
-
-        closeModal() {
-            document.getElementById('bookModal').style.display = 'none';
-        },
-
-        importCSV() {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = '.csv';
-            input.onchange = (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    App.importFromCSV(file, (data) => {
-                        this.processCSVData(data);
-                    });
-                }
-            };
-            input.click();
-        },
-
-        processCSVData(data) {
-            if (!data.length) {
-                App.showToast('No data to import', 'error');
-                return;
-            }
-            
-            const books = App.getBooks();
-            let added = 0;
-            let errors = [];
-
-            data.forEach((row, index) => {
-                try {
-                    if (!row.title || !row.author || !row.category) {
-                        errors.push(`Row ${index + 1}: Missing required fields`);
-                        return;
-                    }
-
-                    const newBook = {
-                        id: App.generateBookId(),
-                        title: row.title.trim(),
-                        author: row.author.trim(),
-                        isbn: row.isbn ? row.isbn.trim() : '',
-                        category: row.category.trim(),
-                        quantity: parseInt(row.quantity) || 1,
-                        coverUrl: row.coverUrl ? row.coverUrl.trim() : '',
-                        available: (parseInt(row.quantity) || 1) > 0,
-                        createdAt: new Date().toISOString()
-                    };
-
-                    books.push(newBook);
-                    added++;
-                } catch (error) {
-                    errors.push(`Row ${index + 1}: ${error.message}`);
-                }
-            });
-
-            App.saveBooks(books);
-            
-            if (added > 0) {
-                App.showToast(`${added} books imported successfully`);
-                this.loadBooks();
-            }
-            
-            if (errors.length > 0) {
-                App.showToast(`${errors.length} rows had errors: ${errors.join(', ')}`, 'error');
-            }
-        },
-
-        exportCSV() {
-            const books = App.getBooks();
-            if (books.length === 0) {
-                App.showToast('No books to export', 'error');
-                return;
-            }
-
-            const csvData = books.map(book => ({
-                id: book.id,
-                title: book.title,
-                author: book.author,
-                isbn: book.isbn,
-                category: book.category,
-                quantity: book.quantity,
-                available: book.available,
-                coverUrl: book.coverUrl
-            }));
-
-            App.exportToCSV(csvData, 'books');
-        }
-    },
-
+    input.click();
+  }
+},
     // ==================== TRANSACTIONS ====================
     transactions: {
         init() {
@@ -800,4 +615,5 @@ const Admin = {
 // Initialize admin functionality
 document.addEventListener('DOMContentLoaded', () => {
     // Admin functionality is initialized by individual page scripts
+
 });
