@@ -200,7 +200,13 @@ Admin.books = {
       alert("CSV imported");
       this.loadBooks();
     };
+closeModal() {
+  document.getElementById("bookModal").style.display = "none";
+},
 
+showAddBookModal() {
+  document.getElementById("bookModal").style.display = "flex";
+}
     input.click();
   }
 };
@@ -291,3 +297,4 @@ document.addEventListener("DOMContentLoaded", () => {
   Admin.books.init();
   Admin.transactions.init();
 });
+
