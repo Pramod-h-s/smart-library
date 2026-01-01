@@ -54,7 +54,7 @@
                     </svg>
                     Issue/Return
                 </a>
-                <button onclick="Auth.logout()" class="nav-link logout-btn">
+                <button id="adminLogoutBtn" class="nav-link logout-btn">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
                         <polyline points="16 17 21 12 16 7"></polyline>
@@ -138,18 +138,28 @@
         </main>
     </div>
 
-    <script src="../js/ui.js"></script>
-    <script src="../js/admin.js"></script>
 <script type="module">
-  import { protectPage } from "../js/auth-check.js";
-  import "../js/ui.js";
+  import UI from "../js/ui.js";
   import "../js/admin.js";
+  import { protectPage } from "../js/auth-check.js";
 
-  protectPage("admin").then(() => {
-    UI.renderNav();
-    Admin.dashboard.init();
+  protectPage("admin");
+</script>
+    <script type="module">
+  import { auth } from "../js/firebase.js";
+  import { signOut } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const btn = document.getElementById("adminLogoutBtn");
+    if (btn) {
+      btn.addEventListener("click", async () => {
+        await signOut(auth);
+        window.location.replace("/login.html");
+      });
+    }
   });
 </script>
 </body>
 </html>
+
 
