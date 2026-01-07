@@ -8,148 +8,131 @@
 </head>
 
 <body>
-<div id="admin-app">
+  <div id="admin-app">
 
-  <!-- ==================== SIDEBAR ==================== -->
-  <aside class="admin-sidebar glass-card">
-    <div class="sidebar-header">
-      <img src="../assets/cbit-logo.jpg" alt="Admin Logo">
-      <h2>Admin Panel</h2>
-    </div>
+    <!-- ================= SIDEBAR ================= -->
+    <aside class="admin-sidebar glass-card">
+      <div class="sidebar-header">
+        <img src="../assets/cbit-logo.jpg" alt="Admin Logo" />
+        <h2>Admin Panel</h2>
+      </div>
 
-    <nav class="sidebar-nav">
-      <a href="dashboard.html" class="nav-link">Dashboard</a>
-      <a href="books.html" class="nav-link active">Books Manager</a>
-      <a href="transactions.html" class="nav-link">Transactions</a>
-      <a href="issue-return.html" class="nav-link">Issue/Return</a>
+      <nav class="sidebar-nav">
+        <a href="dashboard.html" class="nav-link">Dashboard</a>
+        <a href="books.html" class="nav-link active">Books Manager</a>
+        <a href="transactions.html" class="nav-link">Transactions</a>
+        <a href="issue-return.html" class="nav-link">Issue / Return</a>
 
-      <button id="logoutBtn" class="nav-link logout-btn">
-        Logout
-      </button>
-    </nav>
-  </aside>
-
-  <!-- ==================== MAIN ==================== -->
-  <main class="admin-main">
-
-    <header class="admin-header glass-card">
-      <h1>Books Manager</h1>
-
-      <div class="header-actions">
-        <button
-          onclick="document.getElementById('bookModal').style.display='flex'"
-          class="btn-primary">
-          Add Book
+        <button id="logoutBtn" class="nav-link logout-btn">
+          Logout
         </button>
+      </nav>
+    </aside>
 
-        <button onclick="Admin.books.importCSV()" class="btn-success">
-          Import CSV
-        </button>
+    <!-- ================= MAIN ================= -->
+    <main class="admin-main">
 
-        <button onclick="Admin.books.exportCSV()" class="btn-warning">
-          Export CSV
-        </button>
-      </div>
-    </header>
+      <header class="admin-header glass-card">
+        <h1>Books Manager</h1>
 
-    <section class="admin-content">
+        <div class="header-actions">
+          <button id="addBookBtn" class="btn-primary">Add Book</button>
+          <button id="importCsvBtn" class="btn-success">Import CSV</button>
+          <button id="exportCsvBtn" class="btn-warning">Export CSV</button>
+        </div>
+      </header>
 
-      <div class="books-filters glass-card">
-        <input type="text" id="bookSearch" placeholder="Search books..." class="form-control">
-        <select id="categoryFilter" class="form-select">
-          <option value="">All Categories</option>
-        </select>
-      </div>
+      <section class="admin-content">
 
-      <div class="glass-card">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Cover</th>
-              <th>ID</th>
-              <th>Title</th>
-              <th>Author</th>
-              <th>ISBN</th>
-              <th>Category</th>
-              <th>Quantity</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="booksTableBody">
-            <tr>
-              <td colspan="8" class="no-data">Loading books...</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+        <div class="books-filters glass-card">
+          <input id="bookSearch" class="form-control" placeholder="Search books" />
+          <select id="categoryFilter" class="form-select">
+            <option value="">All Categories</option>
+          </select>
+        </div>
 
-    </section>
-  </main>
-</div>
+        <div class="glass-card">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Cover</th>
+                <th>ID</th>
+                <th>Title</th>
+                <th>Author</th>
+                <th>ISBN</th>
+                <th>Category</th>
+                <th>Available</th>
+                <th>Quantity</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="booksTableBody">
+              <tr>
+                <td colspan="9" class="no-data">Loading books...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-<!-- ==================== ADD BOOK MODAL ==================== -->
-<div id="bookModal" class="modal">
-  <div class="modal-content glass-card">
-
-    <div class="modal-header">
-      <h2>Add New Book</h2>
-      <button onclick="Admin.books.closeModal()" class="modal-close">&times;</button>
-    </div>
-
-    <form id="bookForm">
-      <div class="form-group">
-        <label>Title *</label>
-        <input id="bookTitle" required>
-      </div>
-
-      <div class="form-group">
-        <label>Author *</label>
-        <input id="bookAuthor" required>
-      </div>
-
-      <div class="form-group">
-        <label>ISBN</label>
-        <input id="bookISBN">
-      </div>
-
-      <div class="form-group">
-        <label>Category *</label>
-        <input id="bookCategory" required>
-      </div>
-
-      <div class="form-group">
-        <label>Quantity *</label>
-        <input id="bookQuantity" type="number" min="1" required>
-      </div>
-
-      <div class="form-group">
-        <label>Cover URL</label>
-        <input id="bookCover">
-      </div>
-
-      <div class="form-actions">
-        <button type="button" onclick="Admin.books.closeModal()" class="btn-secondary">
-          Cancel
-        </button>
-        <button type="submit" class="btn-primary">
-          Save Book
-        </button>
-      </div>
-    </form>
-
+      </section>
+    </main>
   </div>
-</div>
 
-<!-- ==================== SCRIPTS (ONLY THESE) ==================== -->
-<script type="module">
-  import { protectPage, logoutUser } from "../js/auth-check.js";
-  import "../js/admin.js";
+  <!-- ================= ADD BOOK MODAL ================= -->
+  <div id="bookModal" class="modal">
+    <div class="modal-content glass-card">
 
-  protectPage("admin");
+      <div class="modal-header">
+        <h2>Add New Book</h2>
+        <button id="closeModalBtn" class="modal-close">&times;</button>
+      </div>
 
-  document.getElementById("logoutBtn")
-    ?.addEventListener("click", logoutUser);
-</script>
+      <form id="bookForm">
+        <div class="form-group">
+          <label>Title *</label>
+          <input id="bookTitle" required />
+        </div>
+
+        <div class="form-group">
+          <label>Author *</label>
+          <input id="bookAuthor" required />
+        </div>
+
+        <div class="form-group">
+          <label>ISBN</label>
+          <input id="bookISBN" />
+        </div>
+
+        <div class="form-group">
+          <label>Category *</label>
+          <input id="bookCategory" required />
+        </div>
+
+        <div class="form-group">
+          <label>Quantity *</label>
+          <input id="bookQuantity" type="number" min="1" required />
+        </div>
+
+        <div class="form-group">
+          <label>Cover URL</label>
+          <input id="bookCover" />
+        </div>
+
+        <div class="form-actions">
+          <button type="button" id="cancelModalBtn" class="btn-secondary">
+            Cancel
+          </button>
+          <button type="submit" class="btn-primary">
+            Save Book
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
+  <!-- ================= SCRIPTS ================= -->
+  <script type="module" src="../js/admin.js"></script>
 
 </body>
 </html>
