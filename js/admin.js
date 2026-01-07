@@ -4,18 +4,12 @@
  */
 
 /* ==================== IMPORTS ==================== */
-import { db } from "./firebase.js";
+import { db, auth } from "./firebase.js";
 import {
-  collection,
-  getDocs,
-  query,
-  where,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  doc,
-  Timestamp
+  collection, getDocs, addDoc, deleteDoc, doc, Timestamp
 } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+import { signOut } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+import { protectPage } from "./auth-check.js";
 
 /* ==================== HELPERS ==================== */
 function calculateFine(dueDate) {
@@ -27,7 +21,7 @@ function calculateFine(dueDate) {
 
 /* ==================== ADMIN OBJECT ==================== */
 const Admin = {};
-
+window.Admin = Admin; // 🔥 REQUIRED
 /* ==================== DASHBOARD ==================== */
 Admin.dashboard = {
   async init() {
@@ -110,77 +104,72 @@ Admin.books = {
 
   async init() {
     await this.loadBooks();
-    this.setupForm();
+    this.bindUI();
+  },
+
+  bindUI() {
+    document.getElementById("addBookBtn")?.addEventListener("click", this.showAddBookModal);
+    document.getElementById("importCsvBtn")?.addEventListener("click", this.importCSV);
+    document.getElementById("exportCsvBtn")?.addEventListener("click", this.exportCSV);
+    document.getElementById("closeModalBtn")?.addEventListener("click", this.closeModal);
+    document.getElementById("cancelModalBtn")?.addEventListener("click", this.closeModal);
+    document.getElementById("logoutBtn")?.addEventListener("click", logoutUser);
+
+    const form = document.getElementById("bookForm");
+    form?.addEventListener("submit", this.saveBook.bind(this));
   },
 
   async loadBooks() {
     const tbody = document.getElementById("booksTableBody");
-    if (!tbody) return;
-
     tbody.innerHTML = "";
 
     const snap = await getDocs(collection(db, "books"));
-
     if (snap.empty) {
-      tbody.innerHTML =
-        `<tr><td colspan="9" class="no-data">No books available</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="9">No books</td></tr>`;
       return;
     }
 
     snap.forEach(d => {
-      const b = { id: d.id, ...d.data() };
-
+      const b = d.data();
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td>
-          <img src="${b.coverUrl || '../assets/book-placeholder.jpg'}"
-               class="book-thumbnail">
-        </td>
-        <td>${b.id}</td>
+        <td><img src="${b.coverUrl || '../assets/book-placeholder.jpg'}" class="book-thumbnail"></td>
+        <td>${d.id}</td>
         <td>${b.title}</td>
         <td>${b.author}</td>
         <td>${b.isbn || "N/A"}</td>
         <td>${b.category}</td>
         <td>${b.quantity > 0 ? "Yes" : "No"}</td>
         <td>${b.quantity}</td>
-        <td>
-          <button class="btn-sm btn-danger"
-            onclick="Admin.books.deleteBook('${b.id}')">
-            Delete
-          </button>
-        </td>
+        <td><button data-id="${d.id}" class="deleteBtn">Delete</button></td>
       `;
       tbody.appendChild(tr);
     });
-  },
 
-  setupForm() {
-    const form = document.getElementById("bookForm");
-    if (!form) return;
-
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-
-      await addDoc(collection(db, "books"), {
-        title: bookTitle.value.trim(),
-        author: bookAuthor.value.trim(),
-        isbn: bookISBN.value.trim(),
-        category: bookCategory.value.trim(),
-        quantity: Number(bookQuantity.value),
-        coverUrl: bookCover.value.trim(),
-        createdAt: Timestamp.now()
+    document.querySelectorAll(".deleteBtn").forEach(btn => {
+      btn.addEventListener("click", async e => {
+        await deleteDoc(doc(db, "books", e.target.dataset.id));
+        this.loadBooks();
       });
-
-      alert("Book added successfully");
-      form.reset();
-      this.closeModal();
-      this.loadBooks();
     });
   },
 
-  async deleteBook(id) {
-    if (!confirm("Delete this book?")) return;
-    await deleteDoc(doc(db, "books", id));
+  async saveBook(e) {
+    e.preventDefault();
+
+    await addDoc(collection(db, "books"), {
+      title: bookTitle.value.trim(),
+      author: bookAuthor.value.trim(),
+      isbn: bookISBN.value.trim(),
+      category: bookCategory.value.trim(),
+      quantity: Number(bookQuantity.value),
+      coverUrl: bookCover.value.trim(),
+      createdAt: Timestamp.now()
+    });
+
+    alert("Book added");
+    e.target.reset();
+    this.closeModal();
     this.loadBooks();
   },
 
@@ -190,13 +179,7 @@ Admin.books = {
     input.accept = ".csv";
 
     input.onchange = async () => {
-      const file = input.files[0];
-      if (!file) return;
-
-      const rows = (await file.text())
-        .split("\n")
-        .filter(r => r.trim());
-
+      const rows = (await input.files[0].text()).split("\n").filter(r => r.trim());
       const headers = rows.shift().split(",");
 
       for (const r of rows) {
@@ -207,50 +190,43 @@ Admin.books = {
         await addDoc(collection(db, "books"), {
           title: b.title,
           author: b.author,
-          isbn: b.isbn || "",
           category: b.category,
+          isbn: b.isbn || "",
           quantity: Number(b.quantity || 1),
           coverUrl: b.coverUrl || "",
           createdAt: Timestamp.now()
         });
       }
 
-      alert("CSV imported successfully");
-      this.loadBooks();
+      alert("CSV Imported");
+      Admin.books.loadBooks();
     };
 
     input.click();
   },
 
   exportCSV() {
-    const rows = [];
-    rows.push("title,author,isbn,category,quantity,coverUrl");
-
     getDocs(collection(db, "books")).then(snap => {
+      const rows = ["title,author,isbn,category,quantity,coverUrl"];
       snap.forEach(d => {
         const b = d.data();
-        rows.push(
-          `"${b.title}","${b.author}","${b.isbn || ""}","${b.category}",${b.quantity},"${b.coverUrl || ""}"`
-        );
+        rows.push(`${b.title},${b.author},${b.isbn || ""},${b.category},${b.quantity},${b.coverUrl || ""}`);
       });
 
       const blob = new Blob([rows.join("\n")], { type: "text/csv" });
-      const url = URL.createObjectURL(blob);
-
       const a = document.createElement("a");
-      a.href = url;
+      a.href = URL.createObjectURL(blob);
       a.download = "books.csv";
       a.click();
-      URL.revokeObjectURL(url);
     });
-  },
-
-  closeModal() {
-    document.getElementById("bookModal").style.display = "none";
   },
 
   showAddBookModal() {
     document.getElementById("bookModal").style.display = "flex";
+  },
+
+  closeModal() {
+    document.getElementById("bookModal").style.display = "none";
   }
 };
 
@@ -331,14 +307,15 @@ Admin.issueReturn = {
   }
 };
 
-/* ==================== EXPORT ==================== */
-window.Admin = Admin;
+/* ==================== LOGOUT ==================== */
+async function logoutUser() {
+  await signOut(auth);
+  location.href = "/login.html";
+}
 
 /* ==================== INIT ==================== */
-document.addEventListener("DOMContentLoaded", () => {
-  Admin.dashboard.init();
-  Admin.books.init();
-  Admin.transactions.init();
-});
+protectPage("admin");
+Admin.books.init();
+
 
 
