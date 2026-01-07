@@ -116,6 +116,7 @@ Admin.books = {
   async loadBooks() {
     const tbody = document.getElementById("booksTableBody");
     if (!tbody) return;
+
     tbody.innerHTML = "";
 
     const snap = await getDocs(collection(db, "books"));
@@ -128,17 +129,25 @@ Admin.books = {
 
     snap.forEach(d => {
       const b = { id: d.id, ...d.data() };
+
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td><img src="${b.coverUrl || '../assets/book-placeholder.jpg'}" class="book-thumbnail"></td>
+        <td>
+          <img src="${b.coverUrl || '../assets/book-placeholder.jpg'}"
+               class="book-thumbnail">
+        </td>
+        <td>${b.id}</td>
         <td>${b.title}</td>
         <td>${b.author}</td>
         <td>${b.isbn || "N/A"}</td>
         <td>${b.category}</td>
+        <td>${b.quantity > 0 ? "Yes" : "No"}</td>
         <td>${b.quantity}</td>
         <td>
           <button class="btn-sm btn-danger"
-            onclick="Admin.books.deleteBook('${b.id}')">Delete</button>
+            onclick="Admin.books.deleteBook('${b.id}')">
+            Delete
+          </button>
         </td>
       `;
       tbody.appendChild(tr);
@@ -149,8 +158,9 @@ Admin.books = {
     const form = document.getElementById("bookForm");
     if (!form) return;
 
-    form.addEventListener("submit", async e => {
+    form.addEventListener("submit", async (e) => {
       e.preventDefault();
+
       await addDoc(collection(db, "books"), {
         title: bookTitle.value.trim(),
         author: bookAuthor.value.trim(),
@@ -160,14 +170,16 @@ Admin.books = {
         coverUrl: bookCover.value.trim(),
         createdAt: Timestamp.now()
       });
-      alert("Book added");
+
+      alert("Book added successfully");
       form.reset();
+      this.closeModal();
       this.loadBooks();
     });
   },
 
   async deleteBook(id) {
-    if (!confirm("Delete book?")) return;
+    if (!confirm("Delete this book?")) return;
     await deleteDoc(doc(db, "books", id));
     this.loadBooks();
   },
@@ -178,7 +190,13 @@ Admin.books = {
     input.accept = ".csv";
 
     input.onchange = async () => {
-      const rows = (await input.files[0].text()).split("\n").filter(r => r.trim());
+      const file = input.files[0];
+      if (!file) return;
+
+      const rows = (await file.text())
+        .split("\n")
+        .filter(r => r.trim());
+
       const headers = rows.shift().split(",");
 
       for (const r of rows) {
@@ -189,25 +207,50 @@ Admin.books = {
         await addDoc(collection(db, "books"), {
           title: b.title,
           author: b.author,
-          category: b.category,
           isbn: b.isbn || "",
+          category: b.category,
           quantity: Number(b.quantity || 1),
           coverUrl: b.coverUrl || "",
           createdAt: Timestamp.now()
         });
       }
 
-      alert("CSV imported");
+      alert("CSV imported successfully");
       this.loadBooks();
     };
-closeModal() {
-  document.getElementById("bookModal").style.display = "none";
-},
 
-showAddBookModal() {
-  document.getElementById("bookModal").style.display = "flex";
-}
     input.click();
+  },
+
+  exportCSV() {
+    const rows = [];
+    rows.push("title,author,isbn,category,quantity,coverUrl");
+
+    getDocs(collection(db, "books")).then(snap => {
+      snap.forEach(d => {
+        const b = d.data();
+        rows.push(
+          `"${b.title}","${b.author}","${b.isbn || ""}","${b.category}",${b.quantity},"${b.coverUrl || ""}"`
+        );
+      });
+
+      const blob = new Blob([rows.join("\n")], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "books.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+  },
+
+  closeModal() {
+    document.getElementById("bookModal").style.display = "none";
+  },
+
+  showAddBookModal() {
+    document.getElementById("bookModal").style.display = "flex";
   }
 };
 
@@ -297,4 +340,5 @@ document.addEventListener("DOMContentLoaded", () => {
   Admin.books.init();
   Admin.transactions.init();
 });
+
 
