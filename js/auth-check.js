@@ -79,3 +79,20 @@ export async function logoutUser() {
 }
 
 window.logoutUser = logoutUser;
+// ==================== GLOBAL AUTH COMPATIBILITY ====================
+
+// Provide backward compatibility for onclick="Auth.logout()"
+window.Auth = {
+  logout: async () => {
+    try {
+      await signOut(auth);
+    } catch (e) {
+      console.error("Logout error:", e);
+    } finally {
+      window.location.href = "/login.html";
+    }
+  }
+};
+
+// Also expose direct logout function
+window.logoutUser = window.Auth.logout;
