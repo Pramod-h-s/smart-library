@@ -317,5 +317,9 @@ async function logoutUser() {
 protectPage("admin");
 Admin.books.init();
 
+// 🔑 Make Admin accessible to HTML buttons
+window.Admin = Admin;
+
+
 
 
