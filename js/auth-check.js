@@ -14,7 +14,7 @@ export function protectPage(requiredRole) {
 
     // 🔴 Not logged in
     if (!user) {
-      window.location.replace("/login.html");
+      window.location.href("/login.html");
       return;
     }
 
@@ -61,7 +61,7 @@ async function forceLogout(message) {
   } catch (e) {
     console.error("Logout error:", e);
   } finally {
-    window.location.replace("/login.html");
+    window.location.href("/login.html");
   }
 }
 
@@ -74,7 +74,7 @@ export async function logoutUser() {
   } catch (e) {
     console.error("Logout error:", e);
   } finally {
-    window.location.replace("/login.html");
+    window.location.href("/login.html");
   }
 }
 
