@@ -47,11 +47,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // ✅ Role-based redirect
       if (userData.role === "admin") {
-        window.location.href = "/admin/dashboard.html";
+        window.location.replace("/admin/dashboard.html");
       } else {
-        window.location.href = "/index.html";
+        window.location.replace("/index.html");
       }
-
+      
     } catch (error) {
       alert(error.message);
       console.error("Login error:", error);
