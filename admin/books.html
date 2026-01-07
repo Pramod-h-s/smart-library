@@ -1,138 +1,64 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
   <title>Books Manager - Smart Library</title>
-  <link rel="stylesheet" href="../css/styles.css" />
+  <link rel="stylesheet" href="../css/styles.css">
 </head>
-
 <body>
-  <div id="admin-app">
 
-    <!-- ================= SIDEBAR ================= -->
-    <aside class="admin-sidebar glass-card">
-      <div class="sidebar-header">
-        <img src="../assets/cbit-logo.jpg" alt="Admin Logo" />
-        <h2>Admin Panel</h2>
+<div id="admin-app">
+  <aside class="admin-sidebar glass-card">
+    <h2>Admin Panel</h2>
+    <nav class="sidebar-nav">
+      <a href="dashboard.html">Dashboard</a>
+      <a href="books.html" class="active">Books Manager</a>
+      <a href="transactions.html">Transactions</a>
+      <a href="issue-return.html">Issue / Return</a>
+      <button id="logoutBtn">Logout</button>
+    </nav>
+  </aside>
+
+  <main class="admin-main">
+    <header class="admin-header">
+      <h1>Books Manager</h1>
+      <div class="header-actions">
+        <button id="addBookBtn">Add Book</button>
+        <button id="importCsvBtn">Import CSV</button>
+        <button id="exportCsvBtn">Export CSV</button>
       </div>
+    </header>
 
-      <nav class="sidebar-nav">
-        <a href="dashboard.html" class="nav-link">Dashboard</a>
-        <a href="books.html" class="nav-link active">Books Manager</a>
-        <a href="transactions.html" class="nav-link">Transactions</a>
-        <a href="issue-return.html" class="nav-link">Issue / Return</a>
+    <table>
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Author</th>
+          <th>Category</th>
+          <th>Qty</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="booksTableBody">
+        <tr><td colspan="5">Loading...</td></tr>
+      </tbody>
+    </table>
+  </main>
+</div>
 
-        <button id="logoutBtn" class="nav-link logout-btn">
-          Logout
-        </button>
-      </nav>
-    </aside>
+<!-- Modal -->
+<div id="bookModal" style="display:none">
+  <form id="bookForm">
+    <input id="bookTitle" placeholder="Title" required>
+    <input id="bookAuthor" placeholder="Author" required>
+    <input id="bookCategory" placeholder="Category" required>
+    <input id="bookQuantity" type="number" value="1" required>
+    <button type="submit">Save</button>
+    <button type="button" id="closeModalBtn">Cancel</button>
+  </form>
+</div>
 
-    <!-- ================= MAIN ================= -->
-    <main class="admin-main">
-
-      <header class="admin-header glass-card">
-        <h1>Books Manager</h1>
-
-        <div class="header-actions">
-          <button id="addBookBtn" class="btn-primary">Add Book</button>
-          <button id="importCsvBtn" class="btn-success">Import CSV</button>
-          <button id="exportCsvBtn" class="btn-warning">Export CSV</button>
-        </div>
-      </header>
-
-      <section class="admin-content">
-
-        <div class="books-filters glass-card">
-          <input id="bookSearch" class="form-control" placeholder="Search books" />
-          <select id="categoryFilter" class="form-select">
-            <option value="">All Categories</option>
-          </select>
-        </div>
-
-        <div class="glass-card">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Cover</th>
-                <th>ID</th>
-                <th>Title</th>
-                <th>Author</th>
-                <th>ISBN</th>
-                <th>Category</th>
-                <th>Available</th>
-                <th>Quantity</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="booksTableBody">
-              <tr>
-                <td colspan="9" class="no-data">Loading books...</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-      </section>
-    </main>
-  </div>
-
-  <!-- ================= ADD BOOK MODAL ================= -->
-  <div id="bookModal" class="modal">
-    <div class="modal-content glass-card">
-
-      <div class="modal-header">
-        <h2>Add New Book</h2>
-        <button id="closeModalBtn" class="modal-close">&times;</button>
-      </div>
-
-      <form id="bookForm">
-        <div class="form-group">
-          <label>Title *</label>
-          <input id="bookTitle" required />
-        </div>
-
-        <div class="form-group">
-          <label>Author *</label>
-          <input id="bookAuthor" required />
-        </div>
-
-        <div class="form-group">
-          <label>ISBN</label>
-          <input id="bookISBN" />
-        </div>
-
-        <div class="form-group">
-          <label>Category *</label>
-          <input id="bookCategory" required />
-        </div>
-
-        <div class="form-group">
-          <label>Quantity *</label>
-          <input id="bookQuantity" type="number" min="1" required />
-        </div>
-
-        <div class="form-group">
-          <label>Cover URL</label>
-          <input id="bookCover" />
-        </div>
-
-        <div class="form-actions">
-          <button type="button" id="cancelModalBtn" class="btn-secondary">
-            Cancel
-          </button>
-          <button type="submit" class="btn-primary">
-            Save Book
-          </button>
-        </div>
-      </form>
-
-    </div>
-  </div>
-
-  <!-- ================= SCRIPTS ================= -->
-  <script type="module" src="../js/admin.js"></script>
+<script type="module" src="../js/admin.js"></script>
 
 </body>
 </html>
