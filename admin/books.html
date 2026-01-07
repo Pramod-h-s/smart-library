@@ -68,7 +68,9 @@
                     <script type="module" src="../js/admin.js"></script>
                         Import CSV
                     </button>
-                    exportCSV() {
+                    <button onclick="Admin.books.exportCSV()" class="btn-warning">
+                        Export CSV
+                        exportCSV() {
                           if (!this.cachedBooks || this.cachedBooks.length === 0) {
                             alert("No books to export");
                             return;
@@ -100,8 +102,6 @@
                           link.click();
                         }
 
-                    <button onclick="Admin.books.exportCSV()" class="btn-warning">
-                        Export CSV
                     </button>
                 </div>
             </header>
@@ -197,4 +197,5 @@
 
 </html>
 window.Admin = Admin;
+
 
