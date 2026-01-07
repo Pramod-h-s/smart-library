@@ -71,7 +71,11 @@ async function forceLogout(message) {
 export async function logoutUser() {
   try {
     await signOut(auth);
+  } catch (e) {
+    console.error("Logout error:", e);
   } finally {
     window.location.replace("/login.html");
   }
 }
+
+window.logoutUser = logoutUser;
