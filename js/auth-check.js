@@ -1,13 +1,9 @@
 // js/auth-check.js
 import { auth, db } from "./firebase.js";
-import {
-  onAuthStateChanged,
-  signOut
-} from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
-import {
-  doc,
-  getDoc
-} from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+import { onAuthStateChanged, signOut }
+  from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+import { doc, getDoc }
+  from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
 /**
  * Protect pages based on role
@@ -15,6 +11,8 @@ import {
  */
 export function protectPage(requiredRole) {
   onAuthStateChanged(auth, async (user) => {
+
+    // 🔴 Not logged in
     if (!user) {
       window.location.replace("/login.html");
       return;
@@ -25,45 +23,54 @@ export function protectPage(requiredRole) {
       const snap = await getDoc(userRef);
 
       if (!snap.exists()) {
-        alert("User record not found. Contact admin.");
-        await logoutUser();
+        await forceLogout("User record not found.");
         return;
       }
 
       const userData = snap.data();
 
-      // ❌ Not approved
+      // 🔴 Not approved
       if (userData.approved === false) {
-        alert("Your account is pending admin approval.");
-        await logoutUser();
+        await forceLogout("Your account is pending admin approval.");
         return;
       }
 
-      // ❌ Wrong role
-      if (userData.role !== requiredRole) {
-        alert("Access denied.");
-        await logoutUser();
+      // 🔴 Role mismatch (ONLY block on protected pages)
+      if (requiredRole && userData.role !== requiredRole) {
+        await forceLogout("Access denied.");
         return;
       }
 
-      // ✅ Allowed
-      console.log("Access granted:", requiredRole);
+      // ✅ Access allowed
+      console.log("Access granted:", userData.role);
 
     } catch (err) {
       console.error("Auth check failed:", err);
-      await logoutUser();
+      await forceLogout("Authentication error.");
     }
   });
 }
 
 /**
- * 🔐 Central Logout Function (USE THIS EVERYWHERE)
+ * 🔐 Central forced logout
  */
-export async function logoutUser() {
+async function forceLogout(message) {
+  if (message) alert(message);
   try {
     await signOut(auth);
   } catch (e) {
     console.error("Logout error:", e);
+  } finally {
+    window.location.replace("/login.html");
+  }
+}
+
+/**
+ * ✅ Optional manual logout (buttons)
+ */
+export async function logoutUser() {
+  try {
+    await signOut(auth);
   } finally {
     window.location.replace("/login.html");
   }
