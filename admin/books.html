@@ -197,16 +197,22 @@
 <script type="module" src="../js/admin.js"></script>
     <script>
 <script type="module">
-  import { protectPage, logoutUser } from "../js/auth-check.js";
   import "../js/admin.js";
+  import { protectPage, logoutUser } from "../js/auth-check.js";
 
   protectPage("admin");
 
-  document.getElementById("logoutBtn")
-    ?.addEventListener("click", logoutUser);
+  document.addEventListener("DOMContentLoaded", () => {
+    window.Admin?.books?.init();
+
+    document
+      .getElementById("logoutBtn")
+      ?.addEventListener("click", logoutUser);
+  });
 </script>
     <script type="module" src="../js/auth-check.js"></script>
 </body>
 
 </html>
 window.Admin = Admin;
+
