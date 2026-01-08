@@ -15,60 +15,7 @@ import {
 import { onAuthStateChanged }
   from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
 
-/* ================= TEMP COMPATIBILITY APP ================= */
-const App = {
-
-  async getBooks() {
-    const snap = await getDocs(collection(db, "books"));
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  },
-
-  async searchBooks(query = "", category = "", availability = "") {
-    const books = await this.getBooks();
-
-    return books.filter(b => {
-      const matchQuery =
-        !query ||
-        b.title?.toLowerCase().includes(query.toLowerCase()) ||
-        b.author?.toLowerCase().includes(query.toLowerCase());
-
-      const matchCategory = !category || b.category === category;
-      const matchAvailability =
-        !availability ||
-        (availability === "available" && b.quantity > 0) ||
-        (availability === "unavailable" && b.quantity <= 0);
-
-      return matchQuery && matchCategory && matchAvailability;
-    });
-  },
-
-  async getTransactions() {
-    const snap = await getDocs(collection(db, "transactions"));
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  },
-
-  async returnBook(transactionId) {
-    await updateDoc(doc(db, "transactions", transactionId), {
-      status: "returned"
-    });
-  },
-
-  calculateFine(dueDate) {
-    if (!dueDate) return 0;
-    const days = Math.floor(
-      (new Date() - new Date(dueDate)) / (1000 * 60 * 60 * 24)
-    );
-    return days > 0 ? days * 5 : 0;
-  },
-
-  formatDate(date) {
-    return new Date(date).toLocaleDateString();
-  }
-};
-
-window.App = App;
-
-/* ================= AUTH HELPERS ================= */
+/* ================= AUTH ================= */
 const Auth = {
   currentUser: null,
 
@@ -90,21 +37,64 @@ const Auth = {
 Auth.init();
 window.Auth = Auth;
 
+/* ================= APP (FIRESTORE HELPERS) ================= */
+const App = {
+
+  async getBooks() {
+    const snap = await getDocs(collection(db, "books"));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  },
+
+  async getUserTransactions(userId) {
+    const snap = await getDocs(
+      query(
+        collection(db, "transactions"),
+        where("userId", "==", userId)
+      )
+    );
+    return snap.docs.map(d => ({
+      id: d.id,
+      ...d.data(),
+      issueDate: d.data().issueDate?.toDate(),
+      dueDate: d.data().dueDate?.toDate(),
+      returnDate: d.data().returnDate?.toDate()
+    }));
+  },
+
+  async returnBook(transactionId) {
+    await updateDoc(doc(db, "transactions", transactionId), {
+      status: "returned",
+      returnDate: new Date()
+    });
+  },
+
+  calculateFine(dueDate) {
+    if (!dueDate) return 0;
+    const days =
+      Math.floor((new Date() - new Date(dueDate)) / (1000 * 60 * 60 * 24));
+    return days > 0 ? days * 5 : 0;
+  },
+
+  formatDate(date) {
+    return date ? new Date(date).toLocaleDateString() : "-";
+  }
+};
+
+window.App = App;
+
 /* ================= PAGES ================= */
 const Pages = {
 
+  /* ---------- HOME ---------- */
   home: {
     async init() {
       console.log("Home page initialized");
-      await this.loadBooks();
-    },
-
-    async loadBooks() {
       const books = await App.getBooks();
       console.log("Featured books:", books.slice(0, 6));
     }
   },
 
+  /* ---------- BOOKS ---------- */
   books: {
     async init() {
       console.log("Books page initialized");
@@ -122,13 +112,96 @@ const Pages = {
           <div class="book-card">
             <h4>${b.title}</h4>
             <p>${b.author}</p>
-          </div>`;
+            <p>Available: ${b.quantity}</p>
+          </div>
+        `;
       });
+    }
+  },
+
+  /* ---------- STUDENT DASHBOARD ---------- */
+  userDashboard: {
+    async init() {
+      console.log("User Dashboard initialized");
+
+      const user = Auth.getCurrentUser();
+      if (!user) {
+        console.error("No logged-in user");
+        return;
+      }
+
+      await this.loadUserInfo(user);
+      await this.loadStats(user);
+      await this.loadTransactions(user);
+    },
+
+    async loadUserInfo(user) {
+      const nameEl = document.getElementById("userFullName");
+      const emailEl = document.getElementById("userEmail");
+
+      if (nameEl) nameEl.textContent = user.email;
+      if (emailEl) emailEl.textContent = user.email;
+    },
+
+    async loadStats(user) {
+      const tx = await App.getUserTransactions(user.uid);
+
+      const issued = tx.filter(t => t.status === "issued");
+      const overdue = issued.filter(t => new Date() > t.dueDate);
+
+      document.getElementById("issuedCount")?.textContent = issued.length;
+      document.getElementById("overdueCount")?.textContent = overdue.length;
+    },
+
+    async loadTransactions(user) {
+      const tbody = document.getElementById("transactionsBody");
+      if (!tbody) return;
+
+      const tx = await App.getUserTransactions(user.uid);
+      tbody.innerHTML = "";
+
+      if (!tx.length) {
+        tbody.innerHTML =
+          `<tr><td colspan="6">No transactions found</td></tr>`;
+        return;
+      }
+
+      tx.forEach(t => {
+        const fine = App.calculateFine(t.dueDate);
+        const overdue =
+          t.status === "issued" && new Date() > t.dueDate;
+
+        tbody.innerHTML += `
+          <tr>
+            <td>${t.bookTitle}</td>
+            <td>${App.formatDate(t.issueDate)}</td>
+            <td>${App.formatDate(t.dueDate)}</td>
+            <td>${t.status.toUpperCase()}</td>
+            <td>${fine} ₹</td>
+            <td>
+              ${
+                t.status === "issued"
+                  ? `<button onclick="Pages.userDashboard.returnBook('${t.id}')">
+                       Return
+                     </button>`
+                  : "-"
+              }
+            </td>
+          </tr>
+        `;
+      });
+    },
+
+    async returnBook(transactionId) {
+      if (!confirm("Return this book?")) return;
+      await App.returnBook(transactionId);
+      alert("Book returned");
+      this.init();
     }
   }
 };
 
-/* ================= ROUTER ================= */
+/* ================= SIMPLE PAGE INIT ================= */
 document.addEventListener("DOMContentLoaded", () => {
   const page =
     window.location.pathname.split("/").pop().split(".")[0] || "index";
