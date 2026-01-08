@@ -124,21 +124,18 @@
 <!-- ✅ ONLY ONE SCRIPT BLOCK -->
 <script type="module">
   import { protectPage, logoutUser } from "../js/auth-check.js";
-  import { Admin } from "../js/admin.js";
+  import "../js/admin.js";
 
   protectPage("admin");
 
   document.getElementById("logoutBtn").onclick = logoutUser;
-  document.getElementById("addBookBtn").onclick = () =>
-    document.getElementById("bookModal").style.display = "flex";
 
-  document.getElementById("importBtn").onclick = Admin.books.importCSV;
-  document.getElementById("exportBtn").onclick = Admin.books.exportCSV;
-
-  Admin.books.init();
+  document.addEventListener("DOMContentLoaded", () => {
+    Admin.books.init();
+  });
 </script>
-
 </body>
 </html>
+
 
 
