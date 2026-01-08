@@ -3,6 +3,8 @@
  * Dashboard, Books, Transactions, Issue/Return
  */
 /* ==================== IMPORTS ==================== */
+import { db, auth } from "./firebase.js";
+
 import {
   collection,
   getDocs,
@@ -334,6 +336,5 @@ async function logoutUser() {
 document.addEventListener("DOMContentLoaded", () => {
   protectPage("admin");
   Admin.books.init();
-
-// 🔑 Make Admin accessible to HTML buttons
-window.Admin = Admin; // 🔥 REQUIRED
+  window.Admin = Admin; // required for inline onclick
+});
