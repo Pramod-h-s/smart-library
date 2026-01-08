@@ -337,8 +337,3 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // 🔑 Make Admin accessible to HTML buttons
 window.Admin = Admin; // 🔥 REQUIRED
-
-
-
-
-
