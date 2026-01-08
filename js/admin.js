@@ -2,12 +2,18 @@
  * Smart Library - Admin Panel (Firestore Only)
  * Dashboard, Books, Transactions, Issue/Return
  */
-
 /* ==================== IMPORTS ==================== */
-import { db, auth } from "./firebase.js";
 import {
-  collection, getDocs, addDoc, deleteDoc, doc, Timestamp
-} from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+  collection,
+  getDocs,
+  addDoc,
+  deleteDoc,
+  updateDoc,
+  doc,
+  query,
+  where,
+  Timestamp
+} from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js"
 import { signOut } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
 import { protectPage } from "./auth-check.js";
 
@@ -21,7 +27,7 @@ function calculateFine(dueDate) {
 
 /* ==================== ADMIN OBJECT ==================== */
 const Admin = {};
-window.Admin = Admin; // 🔥 REQUIRED
+
 /* ==================== DASHBOARD ==================== */
 Admin.dashboard = {
   async init() {
@@ -108,24 +114,32 @@ Admin.books = {
   },
 
   bindUI() {
-    document.getElementById("addBookBtn")?.addEventListener("click", this.showAddBookModal);
-    document.getElementById("importCsvBtn")?.addEventListener("click", this.importCSV);
-    document.getElementById("exportCsvBtn")?.addEventListener("click", this.exportCSV);
-    document.getElementById("closeModalBtn")?.addEventListener("click", this.closeModal);
-    document.getElementById("cancelModalBtn")?.addEventListener("click", this.closeModal);
-    document.getElementById("logoutBtn")?.addEventListener("click", logoutUser);
+    document.getElementById("addBookBtn")
+      ?.addEventListener("click", () => this.showAddBookModal());
 
-    const form = document.getElementById("bookForm");
-    form?.addEventListener("submit", this.saveBook.bind(this));
+    document.getElementById("importBtn")
+      ?.addEventListener("click", () => this.importCSV());
+
+    document.getElementById("exportBtn")
+      ?.addEventListener("click", () => this.exportCSV());
+
+    document.getElementById("logoutBtn")
+      ?.addEventListener("click", logoutUser);
+
+    document.getElementById("bookForm")
+      ?.addEventListener("submit", e => this.saveBook(e));
   },
 
   async loadBooks() {
     const tbody = document.getElementById("booksTableBody");
+    if (!tbody) return;
+
     tbody.innerHTML = "";
 
     const snap = await getDocs(collection(db, "books"));
+
     if (snap.empty) {
-      tbody.innerHTML = `<tr><td colspan="9">No books</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="3">No books found</td></tr>`;
       return;
     }
 
@@ -173,13 +187,16 @@ Admin.books = {
     this.loadBooks();
   },
 
-  importCSV() {
+ importCSV() {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = ".csv";
 
     input.onchange = async () => {
-      const rows = (await input.files[0].text()).split("\n").filter(r => r.trim());
+      const rows = (await input.files[0].text())
+        .split("\n")
+        .filter(r => r.trim());
+
       const headers = rows.shift().split(",");
 
       for (const r of rows) {
@@ -314,11 +331,13 @@ async function logoutUser() {
 }
 
 /* ==================== INIT ==================== */
-protectPage("admin");
-Admin.books.init();
+document.addEventListener("DOMContentLoaded", () => {
+  protectPage("admin");
+  Admin.books.init();
 
 // 🔑 Make Admin accessible to HTML buttons
-window.Admin = Admin;
+window.Admin = Admin; // 🔥 REQUIRED
+
 
 
 
