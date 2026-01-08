@@ -99,12 +99,24 @@ const Admin = {};
       const availableCopies = totalQuantity - issuedCount;
 
       // ---------- UI UPDATE (IDS UNCHANGED) ----------
-      document.getElementById("totalBooks")?.textContent = totalBooks;
-      document.getElementById("issuedBooks")?.textContent = issuedCount;
-      document.getElementById("registeredUsers")?.textContent = usersCount;
-      document.getElementById("overdueBooks")?.textContent = overdueCount;
-      document.getElementById("availableCopies")?.textContent = availableCopies;
-      document.getElementById("totalCategories")?.textContent = categories.size;
+          const elTotalBooks = document.getElementById("totalBooks");
+          if (elTotalBooks) elTotalBooks.textContent = totalBooks;
+          
+          const elIssued = document.getElementById("issuedBooks");
+          if (elIssued) elIssued.textContent = issuedCount;
+          
+          const elUsers = document.getElementById("registeredUsers");
+          if (elUsers) elUsers.textContent = usersCount;
+          
+          const elOverdue = document.getElementById("overdueBooks");
+          if (elOverdue) elOverdue.textContent = overdueCount;
+          
+          const elAvailable = document.getElementById("availableCopies");
+          if (elAvailable) elAvailable.textContent = availableCopies;
+          
+          const elCategories = document.getElementById("totalCategories");
+          if (elCategories) elCategories.textContent = categories.size;
+
     },
 
     async loadRecentTransactions() {
@@ -912,5 +924,6 @@ document.addEventListener("DOMContentLoaded", () => {
   Admin.books.init();
   window.Admin = Admin; // required for inline onclick
 });
+
 
 
