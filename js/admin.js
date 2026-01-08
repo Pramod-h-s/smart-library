@@ -922,16 +922,12 @@ async function logoutUser() {
 /* ==================== INIT ==================== */
 document.addEventListener("DOMContentLoaded", () => {
   protectPage("admin");
-  Admin.books.init();
-  window.Admin = Admin; // required for inline onclick
+ if (document.getElementById("booksTableBody")) {
+    Admin.books.init();
+  }
 });
 
-
-
-
-
-
-
+window.Admin = Admin; // ✅ REQUIRED for inline onclick
 
 
 
