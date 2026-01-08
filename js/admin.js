@@ -8,6 +8,7 @@ import { db, auth } from "./firebase.js";
 import {
   collection,
   getDocs,
+  getDoc, 
   addDoc,
   deleteDoc,
   updateDoc,
@@ -30,11 +31,9 @@ function calculateFine(dueDate) {
 /* ==================== ADMIN OBJECT ==================== */
 const Admin = {};
 
-/* ==================== DASHBOARD ==================== */
 // ==================== ADMIN DASHBOARD ====================
 
-const Admin = {
-  dashboard: {
+  Admin.dashboard = {
     async init() {
       await this.updateStats();
       await this.loadRecentTransactions();
@@ -913,4 +912,5 @@ document.addEventListener("DOMContentLoaded", () => {
   Admin.books.init();
   window.Admin = Admin; // required for inline onclick
 });
+
 
