@@ -148,4 +148,5 @@ document.addEventListener("DOMContentLoaded", () => {
   UI.renderFooter();
 });
 
-export default UI;
+window.UI = UI;
+
