@@ -30,49 +30,99 @@
 
   <!-- MAIN -->
   <main class="admin-main">
+            <header class="admin-header glass-card">
+                <h1>Books Manager</h1>
+                <div class="header-actions">
+                    <button onclick="Admin.books.showAddBookModal()" class="btn-primary">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Add Book
+                    </button>
+                    <button onclick="Admin.books.importCSV()" class="btn-success">
+                        Import CSV
+                    </button>
+                    <button onclick="Admin.books.exportCSV()" class="btn-warning">
+                        Export CSV
+                    </button>
+                </div>
+            </header>
 
-    <header class="admin-header glass-card">
-      <h1>Books Manager</h1>
+            <section class="admin-content">
+                <div class="books-filters glass-card">
+                    <input type="text" id="bookSearch" placeholder="Search books..." class="form-control">
+                    <select id="categoryFilter" class="form-select">
+                        <option value="">All Categories</option>
+                    </select>
+                </div>
 
-      <div class="header-actions">
-        <button id="addBookBtn" class="btn-primary">Add Book</button>
-        <button id="importBtn" class="btn-success">Import CSV</button>
-        <button id="exportBtn" class="btn-warning">Export CSV</button>
-      </div>
-    </header>
+                <div id="booksTableContainer" class="glass-card">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Cover</th>
+                                <th>ID</th>
+                                <th>Title</th>
+                                <th>Author</th>
+                                <th>ISBN</th>
+                                <th>Category</th>
+                                <th>Available</th>
+                                <th>Quantity</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="booksTableBody">
+                            <tr>
+                                <td colspan="9" class="no-data">Loading books...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
 
-    <section class="admin-content">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Title</th>
-            <th>Author</th>
-            <th>Quantity</th>
-          </tr>
-        </thead>
-        <tbody id="booksTableBody">
-          <tr><td colspan="3">Loading...</td></tr>
-        </tbody>
-      </table>
-    </section>
-
-  </main>
-</div>
-
-<!-- MODAL -->
-<div id="bookModal" class="modal" style="display:none">
-  <div class="modal-content glass-card">
-    <form id="bookForm">
-      <input id="bookTitle" placeholder="Title" required>
-      <input id="bookAuthor" placeholder="Author" required>
-      <input id="bookISBN" placeholder="ISBN">
-      <input id="bookCategory" placeholder="Category" required>
-      <input id="bookQuantity" type="number" placeholder="Quantity" required>
-      <input id="bookCover" placeholder="Cover URL">
-      <button type="submit">Save Book</button>
-    </form>
-  </div>
-</div>
+    <!-- Add/Edit Book Modal -->
+    <div id="bookModal" class="modal">
+        <div class="modal-content glass-card">
+            <div class="modal-header">
+                <h2 id="modalTitle">Add New Book</h2>
+                <button onclick="Admin.books.closeModal()" class="modal-close">&times;</button>
+            </div>
+            <form id="bookForm">
+                <input type="hidden" id="bookId">
+                <div class="form-group">
+                    <label for="bookTitle">Title *</label>
+                    <input type="text" id="bookTitle" required>
+                </div>
+                <div class="form-group">
+                    <label for="bookAuthor">Author *</label>
+                    <input type="text" id="bookAuthor" required>
+                </div>
+                <div class="form-group">
+                    <label for="bookISBN">ISBN</label>
+                    <input type="text" id="bookISBN" placeholder="978-1234567890">
+                </div>
+                <div class="form-group">
+                    <label for="bookCategory">Category *</label>
+                    <input type="text" id="bookCategory" required placeholder="e.g., Programming, Electronics">
+                </div>
+                <div class="form-group">
+                    <label for="bookQuantity">Quantity *</label>
+                    <input type="number" id="bookQuantity" min="1" required>
+                </div>
+                <div class="form-group">
+                    <label for="bookCover">Cover Image URL</label>
+                    <input type="url" id="bookCover" placeholder="https://example.com/book-cover.jpg">
+                </div>
+                <div class="form-actions">
+                    <button type="button" onclick="Admin.books.closeModal()" class="btn-secondary">Cancel</button>
+                    <button type="submit" class="btn-primary">Save Book</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
 <!-- ✅ ONLY ONE SCRIPT BLOCK -->
 <script type="module">
@@ -93,3 +143,4 @@
 
 </body>
 </html>
+
