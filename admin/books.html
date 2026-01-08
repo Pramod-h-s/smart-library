@@ -123,19 +123,17 @@
 
 <!-- ✅ ONLY ONE SCRIPT BLOCK -->
 <script type="module">
-  import { protectPage, logoutUser } from "../js/auth-check.js";
+  import { logoutUser } from "../js/auth-check.js";
   import "../js/admin.js";
 
-  protectPage("admin");
-
-  document.getElementById("logoutBtn").onclick = logoutUser;
-
   document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("logoutBtn").onclick = logoutUser;
     Admin.books.init();
   });
 </script>
 </body>
 </html>
+
 
 
 
