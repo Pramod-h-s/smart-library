@@ -412,3 +412,4 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log(`No init function found for page: ${page}`);
     }
 });
+window.Pages = Pages;
