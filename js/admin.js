@@ -168,7 +168,7 @@ const Admin = {};
       });
     }
   }
-};
+}
 
 /* ==================== BOOKS ==================== */
 Admin.books = {
@@ -924,6 +924,7 @@ document.addEventListener("DOMContentLoaded", () => {
   Admin.books.init();
   window.Admin = Admin; // required for inline onclick
 });
+
 
 
 
