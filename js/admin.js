@@ -707,12 +707,12 @@ Admin.issueReturn = {
       const scannerError = document.getElementById("scannerError");
       if (scannerError) {
         scannerError.style.display = "block";
-      }
+      },
 
     this.scanner = {
       start: () => console.log("Scanner started"),
       stop: () => console.log("Scanner stopped")
-    };
+    }
 
   // ================= BOOK SEARCH =================
   async searchBook() {
@@ -923,6 +923,7 @@ document.addEventListener("DOMContentLoaded", () => {
   Admin.books.init();
   window.Admin = Admin; // required for inline onclick
 });
+
 
 
 
