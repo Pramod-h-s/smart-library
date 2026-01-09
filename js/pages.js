@@ -109,7 +109,8 @@ const Pages = {
         return due && new Date() > due;
       });
 
-      document.getElementById("issuedCount")?.textContent = issued.length;
+      const issuedEl = document.getElementById("issuedCount");
+          if (issuedEl) issuedEl.textContent = issued.length;
       document.getElementById("overdueCount")?.textContent = overdue.length;
     },
 
@@ -171,3 +172,4 @@ const Pages = {
 };
 
 window.Pages = Pages;
+
