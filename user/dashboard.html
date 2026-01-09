@@ -1,55 +1,111 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Dashboard - Smart Library</title>
-    <link rel="stylesheet" href="../css/styles.css">
-</head>
-<body>
-    <div id="app">
-        <header class="glass-header">
-            <nav id="main-nav"></nav>
-        </header>
-
-        <main class="container">
-            <section class="dashboard-header glass-card">
-                <h1>My Dashboard</h1>
-                <div class="user-info">
-                    <div>
-                        <h2 id="userFullName">Student</h2>
-                        <p id="userUSN">USN: -</p>
-                    </div>
-                </div>
-            </section>
-
-            <section class="stats-grid">
-                <div class="stat-card glass-card">
-                    <h3>Books Issued</h3>
-                    <p id="issuedCount">0</p>
-                </div>
-                <div class="stat-card glass-card">
-                    <h3>Overdue Books</h3>
-                    <p id="overdueCount">0</p>
-                </div>
-            </section>
-
-            <section class="transactions-section glass-card">
-                <h2>My Transactions</h2>
-                <div id="userTransactions">
-                    <table id="transactionsTable" class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Transaction ID</th>
-                                <th>Book Title</th>
-                                <th>Issue Date</th>
-                                <th>Due Date</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="transactionsBody">
-                            <tr>
+                                    /* ================= USER DASHBOARD ================= */
+                                    userDashboard: {
+                                      async init() {
+                                        console.log("User Dashboard initialized");
+                                    
+                                        const user = Auth.getCurrentUser();
+                                        if (!user) {
+                                          console.warn("No authenticated user");
+                                          return;
+                                        }
+                                    
+                                        this.loadUserInfo(user);
+                                        await this.loadUserStats(user);
+                                        await this.loadUserTransactions(user);
+                                      },
+                                    
+                                      /* ---------- USER INFO ---------- */
+                                      loadUserInfo(user) {
+                                        const nameEl = document.getElementById("userFullName");
+                                        const usnEl = document.getElementById("userUSN");
+                                    
+                                        if (nameEl) nameEl.textContent = user.name || user.displayName || "Student";
+                                        if (usnEl) usnEl.textContent = `USN: ${user.usn || "-"}`;
+                                      },
+                                    
+                                      /* ---------- USER STATS ---------- */
+                                      async loadUserStats(user) {
+                                        const snap = await getDocs(
+                                          query(
+                                            collection(db, "transactions"),
+                                            where("userId", "==", user.uid)
+                                          )
+                                        );
+                                    
+                                        const transactions = snap.docs.map(d => {
+                                          const t = d.data();
+                                          return {
+                                            ...t,
+                                            issueDate: t.issueDate?.toDate(),
+                                            dueDate: t.dueDate?.toDate()
+                                          };
+                                        });
+                                    
+                                        const issued = transactions.filter(t => t.status === "issued");
+                                        const overdue = issued.filter(
+                                          t => t.dueDate && new Date() > t.dueDate
+                                        );
+                                    
+                                        document.getElementById("issuedCount")?.textContent = issued.length;
+                                        document.getElementById("overdueCount")?.textContent = overdue.length;
+                                      },
+                                    
+                                      /* ---------- TRANSACTIONS TABLE ---------- */
+                                      async loadUserTransactions(user) {
+                                        const tbody = document.getElementById("transactionsBody");
+                                        if (!tbody) return;
+                                    
+                                        tbody.innerHTML = "";
+                                    
+                                        const snap = await getDocs(
+                                          query(
+                                            collection(db, "transactions"),
+                                            where("userId", "==", user.uid)
+                                          )
+                                        );
+                                    
+                                        if (snap.empty) {
+                                          tbody.innerHTML =
+                                            `<tr>
+                                              <td colspan="6" class="no-data">No transactions yet.</td>
+                                            </tr>`;
+                                          return;
+                                        }
+                                    
+                                        snap.docs
+                                          .map(d => {
+                                            const t = d.data();
+                                            return {
+                                              id: d.id,
+                                              ...t,
+                                              issueDate: t.issueDate?.toDate(),
+                                              dueDate: t.dueDate?.toDate()
+                                            };
+                                          })
+                                          .sort((a, b) => b.issueDate - a.issueDate)
+                                          .forEach(t => {
+                                            const isOverdue =
+                                              t.status === "issued" &&
+                                              t.dueDate &&
+                                              new Date() > t.dueDate;
+                                    
+                                            const row = document.createElement("tr");
+                                            row.innerHTML = `
+                                              <td>${t.id}</td>
+                                              <td>${t.bookTitle}</td>
+                                              <td>${t.issueDate?.toLocaleDateString() || "-"}</td>
+                                              <td>${t.dueDate?.toLocaleDateString() || "-"}</td>
+                                              <td>
+                                                <span class="status-badge status-${t.status} ${isOverdue ? "overdue" : ""}">
+                                                  ${t.status.toUpperCase()}
+                                                </span>
+                                              </td>
+                                              <td>-</td>
+                                            `;
+                                            tbody.appendChild(row);
+                                          });
+                                      }
+                                    }
                                 <td colspan="6" class="no-data">No transactions yet.</td>
                             </tr>
                         </tbody>
@@ -84,3 +140,4 @@
 </body>
 
 </html>
+
