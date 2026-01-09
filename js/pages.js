@@ -84,25 +84,28 @@ const Pages = {
       });
     }
   },
-/*=======STUDENT PROFILE======*/
-  Pages.userProfile = {
-  async init() {
-    console.log("User Profile initialized");
+  
+ /* ===== STUDENT PROFILE ===== */
+  userProfile: {
+    async init() {
+      console.log("User Profile initialized");
 
-    const user = Auth.getCurrentUser();
-    if (!user) return;
+      const user = Auth.getCurrentUser();
+      if (!user) return;
 
-    document.getElementById("profileNameDisplay").textContent =
-      user.displayName || "Student";
-    document.getElementById("profileUSNDisplay").textContent =
-      user.usn || "-";
+      document.getElementById("profileNameDisplay")?.textContent =
+        user.displayName || "Student";
 
-    document.getElementById("profileName").value =
-      user.displayName || "";
-    document.getElementById("profileEmail").value =
-      user.email || "";
-  }
-};
+      document.getElementById("profileUSNDisplay")?.textContent =
+        user.usn || "-";
+
+      document.getElementById("profileName")?.value =
+        user.displayName || "";
+
+      document.getElementById("profileEmail")?.value =
+        user.email || "";
+    }
+  },
   
   /* ===== STUDENT DASHBOARD ===== */
   userDashboard: {
@@ -167,4 +170,5 @@ const Pages = {
 };
 
 window.Pages = Pages;
+
 
