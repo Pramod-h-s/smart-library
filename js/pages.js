@@ -149,8 +149,8 @@ const Pages = {
       const issued = tx.filter(t => t.status === "issued");
       const overdue = issued.filter(t => new Date() > t.dueDate?.toDate());
 
-      document.getElementById("issuedCount")?.textContent = issued.length;
-      document.getElementById("overdueCount")?.textContent = overdue.length;
+     document.getElementById("issuedCount")?.textContent = issued.length;
+     document.getElementById("overdueCount")?.textContent = overdue.length;
     },
 
     async loadTransactions(user) {
@@ -212,4 +212,5 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 window.Pages = Pages;
+
 
