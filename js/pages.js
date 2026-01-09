@@ -1,5 +1,5 @@
 /**
- * Smart Library - Pages (Firestore)
+ * Smart Library - Pages (Student Side)
  */
 
 import { db, auth } from "./firebase.js";
@@ -35,12 +35,12 @@ const Pages = {
 
   /* ===== HOME ===== */
   home: {
-    async init() {
+    init() {
       console.log("Home page initialized");
     }
   },
 
-  /* ===== STUDENT BOOKS PAGE ===== */
+  /* ===== STUDENT BOOKS ===== */
   books: {
     async init() {
       console.log("Student books page initialized");
@@ -74,51 +74,17 @@ const Pages = {
             <h4>${b.title}</h4>
             <p><strong>Author:</strong> ${b.author}</p>
             <p><strong>Category:</strong> ${b.category}</p>
-            <p>
-              <span class="availability-badge ${b.quantity > 0 ? "available" : "unavailable"}">
-                ${b.quantity > 0 ? "Available" : "Out of stock"}
-              </span>
-            </p>
+            <span class="availability-badge ${
+              b.quantity > 0 ? "available" : "unavailable"
+            }">
+              ${b.quantity > 0 ? "Available" : "Out of stock"}
+            </span>
           </div>
         `;
       });
     }
   },
 
-/* ===== STUDENT PROFILE ===== */
-userProfile: {
-  async init() {
-    console.log("User Profile initialized");
-
-    const user = Auth.getCurrentUser(); // ✅ FIXED
-    if (!user) {
-      console.warn("No authenticated user for profile");
-      return;
-    }
-
-    // Display section
-    const nameDisplay = document.getElementById("profileNameDisplay");
-    const usnDisplay = document.getElementById("profileUSNDisplay");
-
-    if (nameDisplay)
-      nameDisplay.textContent = user.displayName || "Student";
-
-    if (usnDisplay)
-      usnDisplay.textContent = user.usn ? `USN: ${user.usn}` : "USN: -";
-
-    // Form fields
-    const nameInput = document.getElementById("profileName");
-    const emailInput = document.getElementById("profileEmail");
-    const usnInput = document.getElementById("profileUSN");
-    const phoneInput = document.getElementById("profilePhone");
-
-    if (nameInput) nameInput.value = user.displayName || "";
-    if (emailInput) emailInput.value = user.email || "";
-    if (usnInput) usnInput.value = user.usn || "";
-    if (phoneInput) phoneInput.value = user.phone || "";
-  }
-}
-  
   /* ===== STUDENT DASHBOARD ===== */
   userDashboard: {
     async init() {
@@ -133,15 +99,10 @@ userProfile: {
 
     async loadStats(user) {
       const snap = await getDocs(
-        query(
-          collection(db, "transactions"),
-          where("userId", "==", user.uid)
-        )
+        query(collection(db, "transactions"), where("userId", "==", user.uid))
       );
 
-      const issued = snap.docs.filter(
-        d => d.data().status === "issued"
-      );
+      const issued = snap.docs.filter(d => d.data().status === "issued");
 
       const overdue = issued.filter(d => {
         const due = d.data().dueDate?.toDate();
@@ -159,10 +120,7 @@ userProfile: {
       tbody.innerHTML = "";
 
       const snap = await getDocs(
-        query(
-          collection(db, "transactions"),
-          where("userId", "==", user.uid)
-        )
+        query(collection(db, "transactions"), where("userId", "==", user.uid))
       );
 
       if (snap.empty) {
@@ -178,16 +136,38 @@ userProfile: {
         row.innerHTML = `
           <td>${d.id}</td>
           <td>${t.bookTitle}</td>
-          <td>${t.issueDate?.toDate()?.toLocaleDateString() || "-"}</td>
-          <td>${t.dueDate?.toDate()?.toLocaleDateString() || "-"}</td>
+          <td>${t.issueDate?.toDate().toLocaleDateString() || "-"}</td>
+          <td>${t.dueDate?.toDate().toLocaleDateString() || "-"}</td>
           <td>${t.status.toUpperCase()}</td>
           <td>-</td>
         `;
+
         tbody.appendChild(row);
       });
+    }
+  },
+
+  /* ===== STUDENT PROFILE ===== */
+  userProfile: {
+    init() {
+      console.log("User Profile initialized");
+
+      const user = Auth.getCurrentUser();
+      if (!user) return;
+
+      document.getElementById("profileNameDisplay")?.textContent =
+        user.displayName || "Student";
+
+      document.getElementById("profileUSNDisplay")?.textContent =
+        user.usn || "-";
+
+      document.getElementById("profileName")?.value =
+        user.displayName || "";
+
+      document.getElementById("profileEmail")?.value =
+        user.email || "";
     }
   }
 };
 
 window.Pages = Pages;
-
