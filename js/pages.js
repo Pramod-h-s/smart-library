@@ -85,28 +85,40 @@ const Pages = {
     }
   },
 
-  /* ===== STUDENT PROFILE ===== */
-  userProfile: {
-    async init() {
-      console.log("User Profile initialized");
+/* ===== STUDENT PROFILE ===== */
+userProfile: {
+  async init() {
+    console.log("User Profile initialized");
 
-      const user = Auth.getCurrentUser();
-      if (!user) return;
-
-      document.getElementById("profileNameDisplay")?.textContent =
-        user.displayName || "Student";
-
-      document.getElementById("profileUSNDisplay")?.textContent =
-        user.usn || "-";
-
-      document.getElementById("profileName")?.value =
-        user.displayName || "";
-
-      document.getElementById("profileEmail")?.value =
-        user.email || "";
+    const user = Auth.getCurrentUser(); // ✅ FIXED
+    if (!user) {
+      console.warn("No authenticated user for profile");
+      return;
     }
-  },
 
+    // Display section
+    const nameDisplay = document.getElementById("profileNameDisplay");
+    const usnDisplay = document.getElementById("profileUSNDisplay");
+
+    if (nameDisplay)
+      nameDisplay.textContent = user.displayName || "Student";
+
+    if (usnDisplay)
+      usnDisplay.textContent = user.usn ? `USN: ${user.usn}` : "USN: -";
+
+    // Form fields
+    const nameInput = document.getElementById("profileName");
+    const emailInput = document.getElementById("profileEmail");
+    const usnInput = document.getElementById("profileUSN");
+    const phoneInput = document.getElementById("profilePhone");
+
+    if (nameInput) nameInput.value = user.displayName || "";
+    if (emailInput) emailInput.value = user.email || "";
+    if (usnInput) usnInput.value = user.usn || "";
+    if (phoneInput) phoneInput.value = user.phone || "";
+  }
+}
+  
   /* ===== STUDENT DASHBOARD ===== */
   userDashboard: {
     async init() {
@@ -178,3 +190,4 @@ const Pages = {
 };
 
 window.Pages = Pages;
+
