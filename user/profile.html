@@ -1,105 +1,90 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Profile - Smart Library</title>
-    <link rel="stylesheet" href="../css/styles.css">
-    <link rel="stylesheet" href="../css/profile.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Profile - Smart Library</title>
+
+  <link rel="stylesheet" href="../css/styles.css" />
+  <link rel="stylesheet" href="../css/profile.css" />
 </head>
+
 <body>
-    <div id="app">
-        <header class="glass-header">
-            <nav id="main-nav"></nav>
-        </header>
+  <div id="app">
+    <!-- ===== HEADER ===== -->
+    <header class="glass-header">
+      <nav id="main-nav"></nav>
+    </header>
 
-        <main class="container">
-            <h1 class="profile-title">My Profile</h1>
+    <!-- ===== MAIN ===== -->
+    <main class="container">
+      <h1 class="profile-title">My Profile</h1>
 
-            <div class="profile-container">
-                <div class="profile-row">
-                    <!-- Profile Header Card -->
-                    <div class="glass-card profile-header-card profile-card">
-                        <img src="../assets/profile-icon.jpg" class="profile-image profile-img" alt="Profile">
-                        <h2 id="profileNameDisplay"></h2>
-                        <p id="profileUSNDisplay"></p>
-                    </div>
+      <div class="profile-container">
+        <div class="profile-row">
 
-                    <!-- Update Profile Card -->
-                    <div class="glass-card profile-form-card update-card">
-                        <h3 class="card-title">Update Profile</h3>
-                        <button id="editProfileBtn" class="btn btn-edit-profile">Edit Profile</button>
-                        
-                        <div class="form-group">
-                            <label for="profileName">Full Name</label>
-                            <input type="text" id="profileName" disabled>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="profileEmail">Email</label>
-                            <input type="email" id="profileEmail" disabled readonly>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="profileUSN">USN</label>
-                            <input type="text" id="profileUSN" disabled readonly>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="profilePhone">Phone Number</label>
-                            <input type="text" id="profilePhone" disabled>
-                        </div>
-                        
-                        <button id="updateProfileBtn" class="btn btn-update-profile" disabled>Update Profile</button>
-                    </div>
+          <!-- PROFILE HEADER -->
+          <div class="glass-card profile-header-card profile-card">
+            <img
+              src="../assets/profile-icon.jpg"
+              class="profile-image profile-img"
+              alt="Profile"
+            />
+            <h2 id="profileNameDisplay">Student</h2>
+            <p id="profileUSNDisplay">USN: -</p>
+          </div>
 
-                    <!-- Change Password Card -->
-                    <div class="glass-card profile-form-card password-card">
-                        <h3 class="card-title">Change Password</h3>
-                        <button id="editPasswordBtn" class="btn btn-edit-password">Edit Password</button>
-                        
-                        <div class="form-group">
-                            <label for="currentPassword">Current Password</label>
-                            <input type="password" id="currentPassword" disabled>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="newPassword">New Password</label>
-                            <input type="password" id="newPassword" disabled>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="confirmPassword">Confirm New Password</label>
-                            <input type="password" id="confirmPassword" disabled>
-                        </div>
-                        
-                        <button id="changePasswordBtn" class="btn btn-change-password" disabled>Change Password</button>
-                    </div>
-                </div>
+          <!-- UPDATE PROFILE -->
+          <div class="glass-card profile-form-card update-card">
+            <h3 class="card-title">Update Profile</h3>
+
+            <div class="form-group">
+              <label for="profileName">Full Name</label>
+              <input type="text" id="profileName" disabled />
             </div>
-        </main>
 
-        <footer class="glass-footer">
-            <div class="footer-bottom">
-                <p>&copy; 2025 C. Byre Gowda Institute of Technology. All rights reserved.</p>
+            <div class="form-group">
+              <label for="profileEmail">Email</label>
+              <input type="email" id="profileEmail" disabled readonly />
             </div>
-        </footer>
-    </div>
 
-<!-- ✅ ONLY MODULE SCRIPT -->
+            <div class="form-group">
+              <label for="profileUSN">USN</label>
+              <input type="text" id="profileUSN" disabled readonly />
+            </div>
+
+            <div class="form-group">
+              <label for="profilePhone">Phone</label>
+              <input type="text" id="profilePhone" disabled />
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </main>
+
+    <!-- ===== FOOTER ===== -->
+    <footer class="glass-footer">
+      <div class="footer-bottom">
+        <p>&copy; 2025 C. Byre Gowda Institute of Technology. All rights reserved.</p>
+      </div>
+    </footer>
+  </div>
+
+  <!-- ================= MODULE SCRIPT ================= -->
   <script type="module">
     import { protectPage } from "../js/auth-check.js";
     import "../js/ui.js";
     import "../js/pages.js";
 
-    // 🔐 Protect student profile
+    // 🔐 Protect student profile page
     protectPage("student");
 
+    // 🚀 Init page
     document.addEventListener("DOMContentLoaded", () => {
       UI.renderNav();
       Pages.userProfile.init();
     });
   </script>
-
 </body>
 </html>
