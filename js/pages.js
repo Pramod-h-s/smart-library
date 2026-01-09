@@ -1,16 +1,13 @@
 /**
- * Smart Library - Page-Specific Logic (Firestore Compatible)
+ * Smart Library - Pages (Firestore)
  */
 
-/* ================= FIREBASE ================= */
 import { db, auth } from "./firebase.js";
 import {
   collection,
   getDocs,
   query,
-  where,
-  updateDoc,
-  doc
+  where
 } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 import { onAuthStateChanged }
   from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
@@ -27,190 +24,127 @@ const Auth = {
 
   getCurrentUser() {
     return this.currentUser;
-  },
-
-  checkAuth() {
-    return !!this.currentUser;
   }
 };
 
 Auth.init();
 window.Auth = Auth;
 
-/* ================= APP (FIRESTORE HELPERS) ================= */
-const App = {
-
-  async getBooks() {
-    const snap = await getDocs(collection(db, "books"));
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  },
-
-  async getUserTransactions(userId) {
-    const snap = await getDocs(
-      query(
-        collection(db, "transactions"),
-        where("userId", "==", userId)
-      )
-    );
-    return snap.docs.map(d => ({
-      id: d.id,
-      ...d.data(),
-      issueDate: d.data().issueDate?.toDate(),
-      dueDate: d.data().dueDate?.toDate(),
-      returnDate: d.data().returnDate?.toDate()
-    }));
-  },
-
-  async returnBook(transactionId) {
-    await updateDoc(doc(db, "transactions", transactionId), {
-      status: "returned",
-      returnDate: new Date()
-    });
-  },
-
-  calculateFine(dueDate) {
-    if (!dueDate) return 0;
-    const days =
-      Math.floor((new Date() - new Date(dueDate)) / (1000 * 60 * 60 * 24));
-    return days > 0 ? days * 5 : 0;
-  },
-
-  formatDate(date) {
-    return date ? new Date(date).toLocaleDateString() : "-";
-  }
-};
-
-window.App = App;
-
 /* ================= PAGES ================= */
 const Pages = {
 
-  /* ---------- HOME ---------- */
+  /* ===== HOME ===== */
   home: {
     async init() {
       console.log("Home page initialized");
-      const books = await App.getBooks();
-      console.log("Featured books:", books.slice(0, 6));
     }
   },
 
-  /* ---------- BOOKS ---------- */
+  /* ===== STUDENT BOOKS PAGE ===== */
   books: {
     async init() {
-      console.log("Books page initialized");
-      const books = await App.getBooks();
-      this.displayBooks(books);
+      console.log("Student books page initialized");
+      const books = await this.getBooks();
+      this.renderBooks(books);
     },
 
-    displayBooks(books) {
+    async getBooks() {
+      const snap = await getDocs(collection(db, "books"));
+      return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    },
+
+    renderBooks(books) {
       const grid = document.getElementById("booksGrid");
+      const noBooks = document.getElementById("noBooks");
+
       if (!grid) return;
 
       grid.innerHTML = "";
+
+      if (!books.length) {
+        noBooks.style.display = "block";
+        return;
+      }
+
+      noBooks.style.display = "none";
+
       books.forEach(b => {
         grid.innerHTML += `
-          <div class="book-card">
+          <div class="book-card glass-card">
             <h4>${b.title}</h4>
-            <p>${b.author}</p>
-            <p>Available: ${b.quantity}</p>
+            <p><strong>Author:</strong> ${b.author}</p>
+            <p><strong>Category:</strong> ${b.category}</p>
+            <p>
+              <span class="availability-badge ${b.quantity > 0 ? "available" : "unavailable"}">
+                ${b.quantity > 0 ? "Available" : "Out of stock"}
+              </span>
+            </p>
           </div>
         `;
       });
     }
   },
 
-  /* ---------- STUDENT DASHBOARD ---------- */
+  /* ===== STUDENT DASHBOARD ===== */
   userDashboard: {
     async init() {
       console.log("User Dashboard initialized");
 
       const user = Auth.getCurrentUser();
-      if (!user) {
-        console.error("No logged-in user");
-        return;
-      }
+      if (!user) return;
 
-      await this.loadUserInfo(user);
       await this.loadStats(user);
       await this.loadTransactions(user);
     },
 
-    async loadUserInfo(user) {
-      const nameEl = document.getElementById("userFullName");
-      const emailEl = document.getElementById("userEmail");
-
-      if (nameEl) nameEl.textContent = user.email;
-      if (emailEl) emailEl.textContent = user.email;
-    },
-
     async loadStats(user) {
-      const tx = await App.getUserTransactions(user.uid);
+      const snap = await getDocs(
+        query(collection(db, "transactions"), where("userId", "==", user.uid))
+      );
 
-      const issued = tx.filter(t => t.status === "issued");
-      const overdue = issued.filter(t => new Date() > t.dueDate?.toDate());
+      const issued = snap.docs.filter(d => d.data().status === "issued");
 
-     document.getElementById("issuedCount")?.textContent = issued.length;
-     document.getElementById("overdueCount")?.textContent = overdue.length;
+      const overdue = issued.filter(d => {
+        const due = d.data().dueDate?.toDate();
+        return due && new Date() > due;
+      });
+
+      document.getElementById("issuedCount").textContent = issued.length;
+      document.getElementById("overdueCount").textContent = overdue.length;
     },
 
     async loadTransactions(user) {
       const tbody = document.getElementById("transactionsBody");
       if (!tbody) return;
 
-      const tx = await App.getUserTransactions(user.uid);
       tbody.innerHTML = "";
 
-      if (!tx.length) {
+      const snap = await getDocs(
+        query(collection(db, "transactions"), where("userId", "==", user.uid))
+      );
+
+      if (snap.empty) {
         tbody.innerHTML =
-          `<tr><td colspan="6">No transactions found</td></tr>`;
+          `<tr><td colspan="6" class="no-data">No transactions yet.</td></tr>`;
         return;
       }
 
-      tx.forEach(t => {
-        const fine = App.calculateFine(t.dueDate?.toDate());
-        const overdue =
-          t.status === "issued" && new Date() > t.dueDate?.toDate();
+      snap.docs.forEach(d => {
+        const t = d.data();
+        const row = document.createElement("tr");
 
-        tbody.innerHTML += `
-          <tr>
-            <td>${t.bookTitle}</td>
-            <td>${App.formatDate(t.issueDate)}</td>
-            <td>${App.formatDate(t.dueDate)}</td>
-            <td>${t.status.toUpperCase()}</td>
-            <td>${fine} ₹</td>
-            <td>
-              ${
-                t.status === "issued"
-                  ? `<button onclick="Pages.userDashboard.returnBook('${t.id}')">
-                       Return
-                     </button>`
-                  : "-"
-              }
-            </td>
-          </tr>
+        row.innerHTML = `
+          <td>${d.id}</td>
+          <td>${t.bookTitle}</td>
+          <td>${t.issueDate?.toDate().toLocaleDateString()}</td>
+          <td>${t.dueDate?.toDate().toLocaleDateString()}</td>
+          <td>${t.status.toUpperCase()}</td>
+          <td>-</td>
         `;
+        tbody.appendChild(row);
       });
-    },
-
-    async returnBook(transactionId) {
-      if (!confirm("Return this book?")) return;
-      await App.returnBook(transactionId);
-      alert("Book returned");
-      this.init();
     }
   }
 };
 
-/* ================= SIMPLE PAGE INIT ================= */
-document.addEventListener("DOMContentLoaded", () => {
-  const page =
-    window.location.pathname.split("/").pop().split(".")[0] || "index";
-
-  if (Pages[page]?.init) {
-    Pages[page].init();
-  }
-});
-
 window.Pages = Pages;
-
-
