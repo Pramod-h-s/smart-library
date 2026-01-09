@@ -86,19 +86,20 @@
         </footer>
     </div>
 
-    <script src="../js/app.js"></script>
-    <script src="../js/auth.js"></script>
-    <script src="../js/ui.js"></script>
-    <script src="../js/pages.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            if (!Auth.checkAuth()) {
-                window.location.href = '../login.html';
-                return;
-            }
-            UI.renderNav();
-            Pages.userProfile();
-        });
-    </script>
+<!-- ✅ ONLY MODULE SCRIPT -->
+  <script type="module">
+    import { protectPage } from "../js/auth-check.js";
+    import "../js/ui.js";
+    import "../js/pages.js";
+
+    // 🔐 Protect student profile
+    protectPage("student");
+
+    document.addEventListener("DOMContentLoaded", () => {
+      UI.renderNav();
+      Pages.userProfile.init();
+    });
+  </script>
+
 </body>
 </html>
