@@ -51,15 +51,21 @@
             </div>
         </footer>
     </div>
-    <script type="module" src="js/ui.js"></script>
-    <script type="module" src="js/pages.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            UI.renderNav();
-            Pages.books.init();
-        });
-    </script>
+<script type="module">
+  import { protectPage } from "./js/auth-check.js";
+  import "./js/ui.js";
+  import "./js/pages.js";
+
+  // 🔐 Allow student access
+  protectPage("student");
+
+  document.addEventListener("DOMContentLoaded", () => {
+    UI.renderNav();
+    Pages.books.init();   // ✅ STUDENT BOOKS
+  });
+</script>
 </body>
 
 </html>
+
 
