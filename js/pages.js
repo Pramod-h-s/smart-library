@@ -147,7 +147,7 @@ const Pages = {
       const tx = await App.getUserTransactions(user.uid);
 
       const issued = tx.filter(t => t.status === "issued");
-      const overdue = issued.filter(t => new Date() > t.dueDate);
+      const overdue = issued.filter(t => new Date() > t.dueDate?.toDate());
 
       document.getElementById("issuedCount")?.textContent = issued.length;
       document.getElementById("overdueCount")?.textContent = overdue.length;
@@ -167,9 +167,9 @@ const Pages = {
       }
 
       tx.forEach(t => {
-        const fine = App.calculateFine(t.dueDate);
+        const fine = App.calculateFine(t.dueDate?.toDate());
         const overdue =
-          t.status === "issued" && new Date() > t.dueDate;
+          t.status === "issued" && new Date() > t.dueDate?.toDate();
 
         tbody.innerHTML += `
           <tr>
@@ -212,3 +212,4 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 window.Pages = Pages;
+
