@@ -1,67 +1,169 @@
 /**
- * Smart Library - Pages (Firestore)
+ * Smart Library - Pages Logic (Student Side)
+ * Firestore-based (No localStorage, No App dependency)
  */
 
 import { db, auth } from "./firebase.js";
 import {
   collection,
   getDocs,
+  addDoc,
   query,
-  where
+  where,
+  Timestamp
 } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+
 import { onAuthStateChanged }
   from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
 
 /* ================= AUTH STATE ================= */
 let currentUser = null;
 
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, user => {
   currentUser = user;
 });
 
 /* ================= PAGES ================= */
 const Pages = {
 
-  /* ===== STUDENT BOOKS PAGE ===== */
+  /* ================= HOME ================= */
+  home: {
+    init() {
+      console.log("Home page initialized");
+    }
+  },
+
+  /* ================= STUDENT BOOKS ================= */
   books: {
+
     async init() {
       console.log("Student Books page initialized");
+      await this.loadBooks();
+      this.setupSearchAndFilters();
+    },
 
-      const grid = document.getElementById("booksGrid");
-      const noBooks = document.getElementById("noBooks");
-      if (!grid) return;
+    async loadBooks() {
+      const snap = await getDocs(collection(db, "books"));
+      const books = snap.docs.map(d => ({
+        id: d.id,
+        ...d.data()
+      }));
+
+      this.renderBooks(books);
+    },
+
+    setupSearchAndFilters() {
+      const searchInput = document.getElementById("searchBooks");
+      const categoryFilter = document.getElementById("categoryFilter");
+      const availabilityFilter = document.getElementById("availabilityFilter");
+
+      if (searchInput) {
+        searchInput.addEventListener("input", () => this.applyFilters());
+      }
+      if (categoryFilter) {
+        categoryFilter.addEventListener("change", () => this.applyFilters());
+      }
+      if (availabilityFilter) {
+        availabilityFilter.addEventListener("change", () => this.applyFilters());
+      }
+    },
+
+    async applyFilters() {
+      const search =
+        document.getElementById("searchBooks")?.value.toLowerCase() || "";
+      const category =
+        document.getElementById("categoryFilter")?.value || "";
+      const availability =
+        document.getElementById("availabilityFilter")?.value || "";
 
       const snap = await getDocs(collection(db, "books"));
-      const books = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const books = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(b => {
+          const matchSearch =
+            !search ||
+            b.title?.toLowerCase().includes(search) ||
+            b.author?.toLowerCase().includes(search) ||
+            b.isbn?.toLowerCase().includes(search);
+
+          const matchCategory =
+            !category || b.category === category;
+
+          const matchAvailability =
+            !availability ||
+            (availability === "available" && b.quantity > 0);
+
+          return matchSearch && matchCategory && matchAvailability;
+        });
+
+      this.renderBooks(books);
+    },
+
+    renderBooks(books) {
+      const grid = document.getElementById("booksGrid");
+      const noBooks = document.getElementById("noBooks");
+
+      if (!grid) return;
 
       grid.innerHTML = "";
 
       if (!books.length) {
-        if (noBooks) noBooks.style.display = "block";
+        noBooks.style.display = "block";
         return;
       }
 
-      if (noBooks) noBooks.style.display = "none";
+      noBooks.style.display = "none";
 
-      books.forEach(b => {
+      books.forEach(book => {
         grid.innerHTML += `
           <div class="book-card glass-card">
-            <h4>${b.title}</h4>
-            <p><strong>Author:</strong> ${b.author}</p>
-            <p><strong>Category:</strong> ${b.category}</p>
-            <span class="availability-badge ${b.quantity > 0 ? "available" : "unavailable"}">
-              ${b.quantity > 0 ? "Available" : "Out of stock"}
+            <h4>${book.title}</h4>
+            <p><strong>Author:</strong> ${book.author}</p>
+            <p><strong>Category:</strong> ${book.category}</p>
+
+            <span class="availability-badge ${
+              book.quantity > 0 ? "available" : "unavailable"
+            }">
+              ${book.quantity > 0 ? "Available" : "Out of Stock"}
             </span>
+
+            ${
+              book.quantity > 0
+                ? `<button class="btn-primary btn-sm"
+                     onclick="Pages.books.requestBook('${book.id}', '${book.title}')">
+                     Request Book
+                   </button>`
+                : ""
+            }
           </div>
         `;
       });
+    },
+
+    async requestBook(bookId, bookTitle) {
+      if (!currentUser) {
+        alert("Please login to request a book");
+        return;
+      }
+
+      await addDoc(collection(db, "book_requests"), {
+        bookId,
+        bookTitle,
+        userId: currentUser.uid,
+        userEmail: currentUser.email,
+        status: "pending",
+        requestedAt: Timestamp.now()
+      });
+
+      alert("Book request sent to admin");
     }
   },
 
-  /* ===== STUDENT DASHBOARD ===== */
+  /* ================= STUDENT DASHBOARD ================= */
   userDashboard: {
     async init() {
       console.log("User Dashboard initialized");
+
       if (!currentUser) return;
 
       await this.loadStats();
@@ -70,8 +172,10 @@ const Pages = {
 
     async loadStats() {
       const snap = await getDocs(
-        query(collection(db, "transactions"),
-          where("userId", "==", currentUser.uid))
+        query(
+          collection(db, "transactions"),
+          where("userId", "==", currentUser.uid)
+        )
       );
 
       const issued = snap.docs.filter(d => d.data().status === "issued");
@@ -91,8 +195,10 @@ const Pages = {
       tbody.innerHTML = "";
 
       const snap = await getDocs(
-        query(collection(db, "transactions"),
-          where("userId", "==", currentUser.uid))
+        query(
+          collection(db, "transactions"),
+          where("userId", "==", currentUser.uid)
+        )
       );
 
       if (snap.empty) {
@@ -103,24 +209,23 @@ const Pages = {
 
       snap.docs.forEach(d => {
         const t = d.data();
-        const row = document.createElement("tr");
-        row.innerHTML = `
-          <td>${d.id}</td>
-          <td>${t.bookTitle}</td>
-          <td>${t.issueDate?.toDate().toLocaleDateString()}</td>
-          <td>${t.dueDate?.toDate().toLocaleDateString()}</td>
-          <td>${t.status.toUpperCase()}</td>
-          <td>-</td>
+        tbody.innerHTML += `
+          <tr>
+            <td>${d.id}</td>
+            <td>${t.bookTitle}</td>
+            <td>${t.issueDate?.toDate().toLocaleDateString()}</td>
+            <td>${t.dueDate?.toDate().toLocaleDateString()}</td>
+            <td>${t.status.toUpperCase()}</td>
+            <td>-</td>
+          </tr>
         `;
-        tbody.appendChild(row);
       });
     }
   },
 
-  /* ===== STUDENT PROFILE ===== */
+  /* ================= STUDENT PROFILE ================= */
   userProfile: {
     init() {
-      console.log("User Profile initialized");
       if (!currentUser) return;
 
       document.getElementById("profileNameDisplay").textContent =
@@ -136,4 +241,5 @@ const Pages = {
   }
 };
 
+/* ================= GLOBAL EXPORT ================= */
 window.Pages = Pages;
