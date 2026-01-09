@@ -1,5 +1,5 @@
 /**
- * Smart Library - Pages (Student Side)
+ * Smart Library - Pages (Firestore)
  */
 
 import { db, auth } from "./firebase.js";
@@ -12,52 +12,27 @@ import {
 import { onAuthStateChanged }
   from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
 
-/* ================= AUTH ================= */
-const Auth = {
-  currentUser: null,
+/* ================= AUTH STATE ================= */
+let currentUser = null;
 
-  init() {
-    onAuthStateChanged(auth, user => {
-      this.currentUser = user;
-    });
-  },
-
-  getCurrentUser() {
-    return this.currentUser;
-  }
-};
-
-Auth.init();
-window.Auth = Auth;
+onAuthStateChanged(auth, (user) => {
+  currentUser = user;
+});
 
 /* ================= PAGES ================= */
 const Pages = {
 
-  /* ===== HOME ===== */
-  home: {
-    init() {
-      console.log("Home page initialized");
-    }
-  },
-
-  /* ===== STUDENT BOOKS ===== */
+  /* ===== STUDENT BOOKS PAGE ===== */
   books: {
     async init() {
-      console.log("Student books page initialized");
-      const books = await this.getBooks();
-      this.renderBooks(books);
-    },
+      console.log("Student Books page initialized");
 
-    async getBooks() {
-      const snap = await getDocs(collection(db, "books"));
-      return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    },
-
-    renderBooks(books) {
       const grid = document.getElementById("booksGrid");
       const noBooks = document.getElementById("noBooks");
-
       if (!grid) return;
+
+      const snap = await getDocs(collection(db, "books"));
+      const books = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
       grid.innerHTML = "";
 
@@ -74,9 +49,7 @@ const Pages = {
             <h4>${b.title}</h4>
             <p><strong>Author:</strong> ${b.author}</p>
             <p><strong>Category:</strong> ${b.category}</p>
-            <span class="availability-badge ${
-              b.quantity > 0 ? "available" : "unavailable"
-            }">
+            <span class="availability-badge ${b.quantity > 0 ? "available" : "unavailable"}">
               ${b.quantity > 0 ? "Available" : "Out of stock"}
             </span>
           </div>
@@ -89,39 +62,37 @@ const Pages = {
   userDashboard: {
     async init() {
       console.log("User Dashboard initialized");
+      if (!currentUser) return;
 
-      const user = Auth.getCurrentUser();
-      if (!user) return;
-
-      await this.loadStats(user);
-      await this.loadTransactions(user);
+      await this.loadStats();
+      await this.loadTransactions();
     },
 
-    async loadStats(user) {
+    async loadStats() {
       const snap = await getDocs(
-        query(collection(db, "transactions"), where("userId", "==", user.uid))
+        query(collection(db, "transactions"),
+          where("userId", "==", currentUser.uid))
       );
 
       const issued = snap.docs.filter(d => d.data().status === "issued");
-
       const overdue = issued.filter(d => {
         const due = d.data().dueDate?.toDate();
         return due && new Date() > due;
       });
 
-      const issuedEl = document.getElementById("issuedCount");
-          if (issuedEl) issuedEl.textContent = issued.length;
-      document.getElementById("overdueCount")?.textContent = overdue.length;
+      document.getElementById("issuedCount").textContent = issued.length;
+      document.getElementById("overdueCount").textContent = overdue.length;
     },
 
-    async loadTransactions(user) {
+    async loadTransactions() {
       const tbody = document.getElementById("transactionsBody");
       if (!tbody) return;
 
       tbody.innerHTML = "";
 
       const snap = await getDocs(
-        query(collection(db, "transactions"), where("userId", "==", user.uid))
+        query(collection(db, "transactions"),
+          where("userId", "==", currentUser.uid))
       );
 
       if (snap.empty) {
@@ -133,16 +104,14 @@ const Pages = {
       snap.docs.forEach(d => {
         const t = d.data();
         const row = document.createElement("tr");
-
         row.innerHTML = `
           <td>${d.id}</td>
           <td>${t.bookTitle}</td>
-          <td>${t.issueDate?.toDate().toLocaleDateString() || "-"}</td>
-          <td>${t.dueDate?.toDate().toLocaleDateString() || "-"}</td>
+          <td>${t.issueDate?.toDate().toLocaleDateString()}</td>
+          <td>${t.dueDate?.toDate().toLocaleDateString()}</td>
           <td>${t.status.toUpperCase()}</td>
           <td>-</td>
         `;
-
         tbody.appendChild(row);
       });
     }
@@ -152,24 +121,19 @@ const Pages = {
   userProfile: {
     init() {
       console.log("User Profile initialized");
+      if (!currentUser) return;
 
-      const user = Auth.getCurrentUser();
-      if (!user) return;
+      document.getElementById("profileNameDisplay").textContent =
+        currentUser.displayName || "Student";
+      document.getElementById("profileUSNDisplay").textContent =
+        currentUser.usn || "-";
 
-      document.getElementById("profileNameDisplay")?.textContent =
-        user.displayName || "Student";
-
-      document.getElementById("profileUSNDisplay")?.textContent =
-        user.usn || "-";
-
-      document.getElementById("profileName")?.value =
-        user.displayName || "";
-
-      document.getElementById("profileEmail")?.value =
-        user.email || "";
+      document.getElementById("profileName").value =
+        currentUser.displayName || "";
+      document.getElementById("profileEmail").value =
+        currentUser.email || "";
     }
   }
 };
 
 window.Pages = Pages;
-
