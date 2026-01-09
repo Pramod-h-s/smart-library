@@ -62,11 +62,11 @@ const Pages = {
       grid.innerHTML = "";
 
       if (!books.length) {
-        noBooks.style.display = "block";
+        if (noBooks) noBooks.style.display = "block";
         return;
       }
 
-      noBooks.style.display = "none";
+      if (noBooks) noBooks.style.display = "none";
 
       books.forEach(b => {
         grid.innerHTML += `
@@ -84,8 +84,8 @@ const Pages = {
       });
     }
   },
-  
- /* ===== STUDENT PROFILE ===== */
+
+  /* ===== STUDENT PROFILE ===== */
   userProfile: {
     async init() {
       console.log("User Profile initialized");
@@ -106,7 +106,7 @@ const Pages = {
         user.email || "";
     }
   },
-  
+
   /* ===== STUDENT DASHBOARD ===== */
   userDashboard: {
     async init() {
@@ -121,18 +121,23 @@ const Pages = {
 
     async loadStats(user) {
       const snap = await getDocs(
-        query(collection(db, "transactions"), where("userId", "==", user.uid))
+        query(
+          collection(db, "transactions"),
+          where("userId", "==", user.uid)
+        )
       );
 
-      const issued = snap.docs.filter(d => d.data().status === "issued");
+      const issued = snap.docs.filter(
+        d => d.data().status === "issued"
+      );
 
       const overdue = issued.filter(d => {
         const due = d.data().dueDate?.toDate();
         return due && new Date() > due;
       });
 
-      document.getElementById("issuedCount").textContent = issued.length;
-      document.getElementById("overdueCount").textContent = overdue.length;
+      document.getElementById("issuedCount")?.textContent = issued.length;
+      document.getElementById("overdueCount")?.textContent = overdue.length;
     },
 
     async loadTransactions(user) {
@@ -142,7 +147,10 @@ const Pages = {
       tbody.innerHTML = "";
 
       const snap = await getDocs(
-        query(collection(db, "transactions"), where("userId", "==", user.uid))
+        query(
+          collection(db, "transactions"),
+          where("userId", "==", user.uid)
+        )
       );
 
       if (snap.empty) {
@@ -158,8 +166,8 @@ const Pages = {
         row.innerHTML = `
           <td>${d.id}</td>
           <td>${t.bookTitle}</td>
-          <td>${t.issueDate?.toDate().toLocaleDateString()}</td>
-          <td>${t.dueDate?.toDate().toLocaleDateString()}</td>
+          <td>${t.issueDate?.toDate()?.toLocaleDateString() || "-"}</td>
+          <td>${t.dueDate?.toDate()?.toLocaleDateString() || "-"}</td>
           <td>${t.status.toUpperCase()}</td>
           <td>-</td>
         `;
@@ -170,5 +178,3 @@ const Pages = {
 };
 
 window.Pages = Pages;
-
-
